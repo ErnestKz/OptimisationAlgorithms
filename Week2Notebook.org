@@ -1,0 +1,495 @@
+#+AUTHOR:Ernests Kuznecovs - 17332791
+#+Date:7th February 2022
+#+Title:Optimisation Algorithms - Week 2 Assignment
+* Preamble :noexport:
+#+PROPERTY: header-args:python :session a1
+#+PROPERTY: header-args:python+ :async yes
+#+PROPERTY: header-args:python+ :eval never-export
+#+PROPERTY: header-args:elisp :eval never-export
+#+EXCLUDE_TAGS: noexport
+
+#+begin_src elisp :results none :exports none
+(setq-local org-image-actual-width '(512))
+(setq-local org-confirm-babel-evaluate nil)
+(setq-local org-src-preserve-indentation 't)
+;; (setq-local org-export-use-babel nil)
+#+end_src
+
+#+begin_src python :results none :exports none :tangle ./Week2Src.py
+import matplotlib as mpl
+mpl.rcParams['figure.dpi'] = 200
+mpl.rcParams['figure.facecolor'] = '1'
+import matplotlib.pyplot as plt
+
+import numpy as np
+import sympy
+#+end_src
+
+* (a) Derivatives and Finite Difference for $y(x) = x^4$
+** (i) Symbolic Derivative
+Using the symbolic maths library sympy, a symbol object $x$ is created, $x \in \mathbb{R}$.
+Then the **4 operator is applied to the object, now it becomes the expression $x^4$.
+The resulting expression can be passed to the sympy.diff function to differentiate it with respect to $x$.
+Differentiating it will now give a sympy object representing $4x^3$. 
+
+#+begin_src python :exports both :tangle ./Week2Src.py
+x = sympy.symbols('x', real=True)
+y = x**4
+dydx = sympy.diff(y,x)
+print(dydx)
+#+end_src
+
+#+RESULTS[fabc0af0f6145db33746d116894eae83f31e4575]:
+: 4*x**3
+
+Using these expressions, sympy can turn them into functions that takes an argument with the sympy.lambdify function.
+Effectively giving us the expressions $y(x)=x^{4}$ and $\frac{dy}{dx}(x)=4x^3$. 
+#+begin_src python :exports code :results none :tangle ./Week2Src.py
+y = sympy.lambdify(x, y)
+dydx = sympy.lambdify(x, dydx)
+#+end_src
+
+** (ii) Finite Difference Implementation
+The python function that computes the finite difference of a function:
+- Inputs to the function are:
+  - f = the function
+  - x = input value for the function
+  - delta ($\delta$) = perturbation 
+- The difference between f at x and f at (x - perturbation) is computed, and divded by perturbation to find out the slope in the span of the perturbation.
+#+begin_src python :results none :exports code :tangle ./Week2Src.py
+def finiteDiff(f, x, delta):
+    return (f(x) - f(x - delta)) / delta
+#+end_src
+
+Range of values x, calculate derivative of the function using sympy and through finiteDiffs with $\delta=0.01$.
+Resulting values are plotted and compared.
+
+The finite difference method with $\delta=0.01$ generates a curve very close to the symoblic one, although a slight fringe of blue is seen at $x>1$ and $x<1$.
+
+#+caption: Finite Difference vs. Symbolic Derivative; for $y(x) = x^4$
+#+attr_latex: :width 8cm :options angle=0
+[[file:./images_week2/finite_difference.png]]
+
+*** Plotting Code :noexport:
+#+begin_src python :exports none :results none :tangle ./Week2Src.py
+def axset(ax, xrange, xoffset, yrange, yoffset):
+    ax.set(xlim=(xoffset-xrange, xoffset+xrange),
+           ylim=(yoffset-yrange, yoffset+yrange))
+#+end_src
+
+#+begin_src python :exports none :file ./images_week2/finite_difference.png :tangle ./Week2Src.py
+xs = np.arange(-20, 20, 0.1)
+
+ys_sym = dydx(xs)
+
+ys_finiteDiff = []
+for x in xs:
+    ys_finiteDiff.append(finiteDiff(y, x, 0.01))
+
+fig, ax = plt.subplots()
+ax.set_ylabel(r'$\frac{dy}{dx}(x)$')
+ax.set_xlabel(r'$x$')
+# ax.set_title(r'Finite Difference vs. Symbolic Derivative'  "\n" r'for $y(x) = x^4$')
+
+ax.plot(xs, ys_sym, linewidth=2.0)
+ax.plot(xs, ys_finiteDiff, linewidth=2.0)
+ax.legend(("Symbolic", r'Finite Difference with $\delta = 0.01$'))
+axset(ax, xrange=2, xoffset=0, yrange=20, yoffset=0)
+
+# ax.set(
+#     xlim=(-3, 3),
+#     ylim=(-20, 20),
+#     xticks=np.arange(1, 8),
+#     yticks=np.arange(1, 8),
+#      )
+#+end_src
+
+#+RESULTS[2d869456c166a45429098fc3c2dee16639d62db6]:
+[[file:./images_week2/finite_difference.png]]
+
+** (iii) Varying $\delta$ on Finite Difference
+As $\delta$ increases, we can see an offset to the curve.
+
+#+caption: Varying $\delta$ on finite difference method.
+#+attr_latex: :width 8cm :options angle=0
+[[file:images_week2/varying_delta.png]]
+
+*** Varying $\delta$ on Finite Difference Plotting Code            :noexport:
+#+begin_src python :exports none :file ./images_week2/varying_delta.png :tangle ./Week2Src.py 
+ys_finiteDiffs = []
+deltas = [0.001, 0.01, 0.1, 0.5, 1]
+
+for delta in deltas:
+  ys_finiteDiff_tmp = []
+  for x in xs:
+      ys_finiteDiff_tmp.append(finiteDiff(y, x, delta))
+  ys_finiteDiffs.append((ys_finiteDiff_tmp, delta))
+
+fig, ax = plt.subplots()
+legend_labels = []  
+for (ys, delta) in ys_finiteDiffs:
+    legend_labels += [r'$\delta = $' + str(delta)]
+    ax.plot(xs, ys, linewidth=2.0)
+
+ax.legend(legend_labels)
+axset(ax, xrange=3, xoffset=1.5, yrange=20, yoffset=10)
+#+end_src
+
+#+RESULTS:
+[[file:./images_week2/varying_delta.png]]
+
+* (b) Gradient Descent Optimisation Algorithm
+** (i) Gradient Descent Implementation
+Gradient descent (g.d) finds the $x$ that minimises some function $f(x)$ i.e g.d finds $argmin_x f(x)$.
+The implementation uses the derivative of $f(x)$ i.e $\frac{df}{dx}(x)$.
+g.d also requires a starting $x$ value i.e $x_{0}$.
+For some defined number of iterations $i_{max}$, g.d iteratively adjusts $x_i$.
+One iteration approximates how to modify $x_i$ in order to move towards the minumum of $f(x)$.
+Approximating is acomplished by using $\frac{df}{dx}(x)$ to find the slope of the curve at point $x_i$, and using the slope as the local approximation for which direction relative to the point $f(x_i)$, the minimum of $f(x)$ lies.
+A step size for $x_i$ is calculated by multiplying $\frac{df}{dx}(x)$ by some scalar $\alpha$, in this case $\alpha$ is manually picked and stays constant throughout all the iterations, although the magnitude of $\frac{df}{dx}(x)$ itself may change and alter the step magnitude.
+The negative of $\frac{df}{dx}(x_i)$ guarantees an instantaneous step for $x_{i}$ in the downwards direction for $f(x_i)$. $x_{i+1} = x_{i} + step$, and the process is repeated.
+
+#+begin_src python :results none :exports code :tangle ./Week2Src.py
+def gradient_descent(df, x0, alpha=0.15, i_max=50):
+    x = x0
+    for k in range(i_max):
+        step = alpha * -df(x)
+        x = x + step
+    return x
+#+end_src
+
+*** Gradient Descent Code :noexport:
+#+begin_src python :results none :exports none :tangle ./Week2Src.py
+class QuadraticFn():
+    def f(self, x):
+        return x**2                       # function value f(x)
+    
+    def df(self, x):
+        return x*2                        # derivative of f(x)
+    
+fn = QuadraticFn()
+
+def gradDesc(fn, x0, alpha=0.15, num_iters=50):
+    x = x0                                # starting point
+    X = np.array([x])                     # array of x history
+    F = np.array(fn.f(x))                 # array of f(x) history
+    for k in range(num_iters):
+        step = alpha * fn.df(x)
+        x = x - step
+        X = np.append(X, [x], axis=0)     # add current x to history
+        F = np.append(F, fn.f(x))         # add value of current f(x) to history
+    return (X,F)
+
+def gradDesc3(f, df, x0, alpha=0.15, num_iters=50):
+    x = x0                                # starting point
+    X = np.array([x])                     # array of x history
+    F = np.array(f(x))                 # array of f(x) history
+    for k in range(num_iters):
+        step = alpha * df(x)
+        x = x - step
+        # print(x)
+        X = np.append(X, [x], axis=0)     # add current x to history
+        F = np.append(F, f(x))         # add value of current f(x) to history
+    return (X,F)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week2Src.py
+(X, F) = gradDesc(fn, 1)
+x = gradient_descent(fn.df, 1)
+#+end_src
+
+#+RESULTS:
+
+** (ii) Visualising Gradient Descent
+$x_0=1$
+$\alpha=0.1$
+$y(x) = x^4$
+
+How $x$ and $y(x)$ vary with each gradient descent iteration.
+
+What are the plots I can put here?
+- x on y-axis, i on x-axis
+- y(x) on y-axis, i on x-axis
+- log(y(x)) on y-axis, i on x-axis
+
+- x=x-axis, f(x)=y-axis
+  - then another lines showing steps taken
+
+*** Plotting Code :noexport:
+#+begin_src python :exports none :file ./images_week2/x_4.png :tangle ./Week2Src.py
+xs = np.arange(-20, 20, 0.1)
+
+ys = dydx(xs)
+ys = y(xs)
+
+fig, ax = plt.subplots()
+ax.set_ylabel(r'$y(x)$')
+ax.set_xlabel(r'$x$')
+
+ax.plot(xs, ys, linewidth=2.0)
+ax.legend(("y(x)", r'Finite Difference with $\delta = 0.01$'))
+axset(ax, xrange=3, xoffset=0, yrange=1.5, yoffset=1.4)
+#+end_src
+
+#+RESULTS:
+[[file:./images_week2/x_4.png]]
+
+#+begin_src python :exports none :file ./images_week2/y_i.png :tangle ./Week2Src.py
+(_, F) = gradDesc3(y, dydx, x0=1, alpha=0.1)
+iters = np.arange(0, len(X))
+
+fig, ax = plt.subplots()
+ax.set_ylabel(r'$y(x_{i})$')
+ax.set_xlabel(r'$i$')
+
+ax.plot(iters, F, linewidth=2.0)
+ax.legend((r'$y(x_{i})$ where $x_i=$ value of x at iteration $i$',))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: <matplotlib.legend.Legend at 0x7f3302e35a30>
+[[file:./images_week2/y_i.png]]
+:END:
+
+#+begin_src python :exports none :file ./images_week2/logy_i.png :tangle ./Week2Src.py
+(_, F) = gradDesc3(y, dydx, x0=1, alpha=0.1)
+iters = np.arange(0, len(X))
+
+fig, ax = plt.subplots()
+ax.set_ylabel(r'$y(x_{i})$')
+ax.set_xlabel(r'$i$')
+
+ax.semilogy(iters, F, linewidth=2.0)
+ax.legend((r'$y(x_{i})$ where $x_i=$ value of x at iteration $i$',))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: <matplotlib.legend.Legend at 0x7f3302f8ba60>
+[[file:./images_week2/logy_i.png]]
+:END:
+
+#+begin_src python :exports none :file ./images_week2/x_i.png :tangle ./Week2Src.py
+(X, _) = gradDesc3(lambda x : x**4, lambda x : 4*x**3, x0=1, alpha=0.1)
+iters = np.arange(0, len(X))
+
+fig, ax = plt.subplots()
+ax.set_ylabel(r'$x_i$')
+ax.set_xlabel(r'$i$')
+
+ax.plot(iters, X, linewidth=2.0)
+ax.legend((r'$x_{i}$ = value of x at iteration $i$',))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: <matplotlib.legend.Legend at 0x7f3307f63cd0>
+[[file:./images_week2/x_i.png]]
+:END:
+
+** (iii) Varying Step Size $\alpha$ and $x_0$
+- Repeat (ii) for a range of $x_{0}$ and $\alpha$
+
+With an $\alpha=0.1$, $\frac{dy}{dx}(x)=4x^3$ is such an exponentialy increasing function that even a $x_0$.
+
+$\alpha$ and $x_0$ can be setup in such a way that it can make a jump over the exponentialy slowing gradient close to 0 and land on the minimum.
+
+*** Varying $\alpha$ and $x_0$ - Plotting Code                     :noexport:
+**** Plotting $x_i$ varying $x_0$
+#+begin_src python :exports none :file ./images_week2/rangex0_3d_x_i.png :tangle ./Week2Src.py
+# (X, _) = gradDesc3(y, dydx, x0=1, alpha=0.1)   # given a range of alphas, give back corresponding dimensions of answers, same for x0s
+# perhaps it gives back objects that describe the shape of the output in detail, perhaps what dimension represents what, and how many there are
+
+x0s = np.arange(0.1, 2, 0.1)
+num_iters = 50
+
+Xs = np.array([])
+for x0 in x0s:
+    (X, _) = gradDesc3(lambda x : x**4, lambda x : 4*x**3, x0=x0, alpha=0.1, num_iters=num_iters)
+    if len(Xs) > 0:
+        Xs = np.append(Xs, [X],  axis=0)
+    else:
+        Xs = np.array([X])
+
+# fig, ax = plt.subplots()
+# ax.set_ylabel(r'$x_i$')
+# ax.set_xlabel(r'$i$')
+# print(num_iters)
+
+# print(Xs.shape)
+# 0th index is x0 = 1.7
+# [0,0] (x0=0.1,i=0)
+# [0,1] (x0=0.1,i=1) 2 params input, Xs is the output
+
+# [1,0] (x0=0.2,i=1)
+# [1,1] (x0=0.2,i=1) 2 params input, Xs is the output
+
+# indexes of inputs must correspond to position of output
+        
+itersY, x0sX = np.meshgrid(np.arange(num_iters+1), x0s)
+# print(x0sX)
+# print(itersY)
+# print(Xs)
+
+fig = plt.figure()
+ax = plt.axes(projection='3d')
+# ax.contour3D(x0sX, itersY, Xs, 100, cmap='binary')
+ax.plot_surface(x0sX, itersY, Xs, rstride=1, cstride=1,
+                cmap='viridis', edgecolor='none')
+ax.view_init(12, 75)
+# ax.view_init(12, 120)
+ax.view_init(12, 30)
+# ax.view_init(0, 0)
+
+ax.set_xlabel(r'$x_0$')
+ax.set_ylabel(r'$i$')
+ax.set_zlabel(r'$x_i$')
+
+# looks like i get slow on these kinds of problems
+# probably practice will help
+# and perhaps doing going slowly through them and
+# understanding them will help
+#+end_src
+
+#+begin_src python :exports none :file ./images_week2/rangex0_2d_x_i.png :tangle ./Week2Src.py
+x0s = [0.1, 0.5, 1, 1.5, 2]
+num_iters = 12
+
+Xs = np.array([])
+for x0 in x0s:
+    (X, _) = gradDesc3(lambda x : x**4,
+                       lambda x : 4*x**3,
+                       x0=x0,
+                       alpha=0.1,
+                       num_iters=num_iters)
+    if len(Xs) > 0:
+        Xs = np.append(Xs, [(X,x0)],  axis=0)
+    else:
+        Xs = np.array([(X, x0)])
+
+fig, ax = plt.subplots()
+ax.set_ylabel(r'$x_i$')
+ax.set_xlabel(r'$i$')
+legend_labels = []
+for (X, x0) in Xs:
+    ax.plot(range(num_iters+1), X, linewidth=2.0)
+    legend_labels += [(r' $x_{0}$ = ' + str(x0))]
+ax.legend(legend_labels)
+#+end_src
+
+**** Plotting $x_i$ varying $\alpha$
+#+begin_src python :exports none :file ./images_week2/rangealpha_2d_x_i.png :tangle ./Week2Src.py
+alphas = [0.1, 0.2, 0.3, 0.4, 0.5]
+num_iters =50
+
+Xs = np.array([])
+for alpha in alphas:
+    (X, _) = gradDesc3(lambda x : x**4,
+                       lambda x : 4*x**3,
+                       x0=1,
+                       alpha=alpha,
+                       num_iters=num_iters)
+    if len(Xs) > 0:
+        Xs = np.append(Xs, [(X,alpha)],  axis=0)
+    else:
+        Xs = np.array([(X, alpha)])
+
+fig, ax = plt.subplots()
+ax.set_ylabel(r'$x_i$')
+ax.set_xlabel(r'$i$')
+legend_labels = []
+for (X, alpha) in Xs:
+    ax.plot(range(num_iters+1), X, linewidth=2.0)
+    legend_labels += [(r' $\alpha$ = ' + str(alpha))]
+ax.legend(legend_labels)
+#+end_src
+
+**** Plotting $y(x_i)$ varying $x_0$
+#+begin_src python :exports none :file ./images_week2/rangex0_2d_y_i.png :tangle ./Week2Src.py
+x0s = [0.1, 0.5, 1, 1.5, 2]
+num_iters = 12
+
+Ys = np.array([])
+for x0 in x0s:
+    (_, Y) = gradDesc3(lambda x : x**4,
+                       lambda x : 4*x**3,
+                       x0=x0,
+                       alpha=0.1,
+                       num_iters=num_iters)
+    if len(Ys) > 0:
+        Ys = np.append(Ys, [(Y,x0)],  axis=0)
+    else:
+        Ys = np.array([(Y, x0)])
+
+fig, ax = plt.subplots()
+ax.set_ylabel(r'$y(x_i)$')
+ax.set_xlabel(r'$i$')
+legend_labels = []
+for (Y, x0) in Ys:
+    ax.plot(range(num_iters+1), Y, linewidth=2.0)
+    legend_labels += [(r' $x_{0}$ = ' + str(x0))]
+ax.legend(legend_labels)
+#+end_src
+
+#+begin_src python :exports none :file ./images_week2/rangex0_2d_log_y_i.png :tangle ./Week2Src.py
+x0s = [0.1, 0.5, 1, 1.5, 2]
+num_iters = 12
+
+Ys = np.array([])
+for x0 in x0s:
+    (_, Y) = gradDesc3(lambda x : x**4,
+                       lambda x : 4*x**3,
+                       x0=x0,
+                       alpha=0.1,
+                       num_iters=num_iters)
+    if len(Ys) > 0:
+        Ys = np.append(Ys, [(Y,x0)],  axis=0)
+    else:
+        Ys = np.array([(Y, x0)])
+
+fig, ax = plt.subplots()
+ax.set_ylabel(r'$x_i$')
+ax.set_xlabel(r'$i$')
+legend_labels = []
+for (Y, x0) in Ys:
+    ax.semilogy(range(num_iters+1), Y, linewidth=2.0)
+    legend_labels += [(r' $x_{0}$ = ' + str(x0))]
+ax.legend(legend_labels)
+#+end_src
+
+**** Plotting $y(x_i)$ varying $\alpha$
+#+begin_src python :exports none :file ./images_week2/rangealpha_2d_log_y_i.png :tangle ./Week2Src.py
+alphas = [0.1, 0.2, 0.3, 0.4, 0.5]
+num_iters = 50
+
+Ys = np.array([])
+for alpha in alphas:
+    (_, Y) = gradDesc3(lambda x : x**4,
+                       lambda x : 4*x**3,
+                       x0=1,
+                       alpha=alpha,
+                       num_iters=num_iters)
+    if len(Ys) > 0:
+        Ys = np.append(Ys, [(Y,alpha)],  axis=0)
+    else:
+        Ys = np.array([(Y, alpha)])
+
+fig, ax = plt.subplots()
+ax.set_ylabel(r'$x_i$')
+ax.set_xlabel(r'$i$')
+legend_labels = []
+for (Y, alpha) in Ys:
+    ax.semilogy(range(num_iters+1), Y, linewidth=2.0)
+    legend_labels += [(r' $\alpha$ = ' + str(alpha))]
+ax.legend(legend_labels)
+#+end_src
+
+* (c) Optimising $y(x) = \gamma x^2$ and $y(x) = \gamma |x|$
+** (i) Optimisng $y(x) = \gamma x^2$
+- Change to using function $y(x) = \gamma x^2$
+  - How does changing gamma affect convergence
+** (ii) Optimising $y(x) = \gamma |x|$
+- Repeat for function $y(x) = \gamma |x|$
+
+  
