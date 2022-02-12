@@ -1,6 +1,34 @@
 #+AUTHOR:Ernests Kuznecovs - 17332791
 #+Date:7th February 2022
 #+Title:Optimisation Algorithms - Week 2 Assignment
+
+#+begin_export latex
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+#+end_export
+
 * Preamble :noexport:
 #+PROPERTY: header-args:python :session a1
 #+PROPERTY: header-args:python+ :async yes
@@ -8,12 +36,37 @@
 #+PROPERTY: header-args:elisp :eval never-export
 #+EXCLUDE_TAGS: noexport
 
+#+LaTeX_HEADER: \usepackage{listings}
+#+LaTeX_HEADER: \usepackage{xcolor}
+#+LaTeX_HEADER: \usepackage{minted}
+
 #+begin_src elisp :results none :exports none
 (setq-local org-image-actual-width '(512))
 (setq-local org-confirm-babel-evaluate nil)
 (setq-local org-src-preserve-indentation 't)
 ;; (setq-local org-export-use-babel nil)
+
+;; (setq org-latex-listings 'minted)
+(setq org-latex-listings t)
+
+;; (setq org-latex-minted-options
+;;     '(
+;;       ;; ("bgcolor" "bg")
+;;       ("frame" "lines")))
+
+;; (setq org-latex-listings-options
+;;     '(("basicstyle" "\\small")
+;;       ("keywordstyle" "\\color{black}\\bfseries\\underbar")))
+
+;; (setq org-latex-listings-options nil)
+
+;; (setq org-latex-pdf-process
+;;       (mapcar
+;;        (lambda (s)
+;;          (replace-regexp-in-string "%latex " "%latex -shell-escape " s))
+;;        org-latex-pdf-process))
 #+end_src
+
 
 #+begin_src python :results none :exports none :tangle ./Week2Src.py
 import matplotlib as mpl
@@ -30,9 +83,10 @@ import sympy
 Using the symbolic maths library sympy, a symbol object $x$ is created, $x \in \mathbb{R}$.
 Then the **4 operator is applied to the object, now it becomes the expression $x^4$.
 The resulting expression can be passed to the sympy.diff function to differentiate it with respect to $x$.
-Differentiating it will now give a sympy object representing $4x^3$. 
+Differentiating it will now give a sympy object representing $4x^3$.
 
-#+begin_src python :exports both :tangle ./Week2Src.py
+# #+ATTR_LATEX: :options style=mystyle 
+#+begin_src python :exports both :tangle ./Week2Src.py 
 x = sympy.symbols('x', real=True)
 y = x**4
 dydx = sympy.diff(y,x)
@@ -44,6 +98,7 @@ print(dydx)
 
 Using these expressions, sympy can turn them into functions that takes an argument with the sympy.lambdify function.
 Effectively giving us the expressions $y(x)=x^{4}$ and $\frac{dy}{dx}(x)=4x^3$. 
+
 #+begin_src python :exports code :results none :tangle ./Week2Src.py
 y = sympy.lambdify(x, y)
 dydx = sympy.lambdify(x, dydx)
@@ -216,6 +271,7 @@ What are the plots I can put here?
   - then another lines showing steps taken
 
 *** Plotting Code :noexport:
+**** Plotting $f(x)$ against $x$
 #+begin_src python :exports none :file ./images_week2/x_4.png :tangle ./Week2Src.py
 xs = np.arange(-20, 20, 0.1)
 
@@ -234,6 +290,7 @@ axset(ax, xrange=3, xoffset=0, yrange=1.5, yoffset=1.4)
 #+RESULTS:
 [[file:./images_week2/x_4.png]]
 
+**** Plotting $f(x_i)$ against $i$
 #+begin_src python :exports none :file ./images_week2/y_i.png :tangle ./Week2Src.py
 (_, F) = gradDesc3(y, dydx, x0=1, alpha=0.1)
 iters = np.arange(0, len(X))
@@ -270,6 +327,7 @@ ax.legend((r'$y(x_{i})$ where $x_i=$ value of x at iteration $i$',))
 [[file:./images_week2/logy_i.png]]
 :END:
 
+**** Plotting $x_i$ against $i$
 #+begin_src python :exports none :file ./images_week2/x_i.png :tangle ./Week2Src.py
 (X, _) = gradDesc3(lambda x : x**4, lambda x : 4*x**3, x0=1, alpha=0.1)
 iters = np.arange(0, len(X))
@@ -289,8 +347,6 @@ ax.legend((r'$x_{i}$ = value of x at iteration $i$',))
 :END:
 
 ** (iii) Varying Step Size $\alpha$ and $x_0$
-- Repeat (ii) for a range of $x_{0}$ and $\alpha$
-
 With an $\alpha=0.1$, $\frac{dy}{dx}(x)=4x^3$ is such an exponentialy increasing function that even a $x_0$.
 
 $\alpha$ and $x_0$ can be setup in such a way that it can make a jump over the exponentialy slowing gradient close to 0 and land on the minimum.
@@ -459,6 +515,7 @@ ax.legend(legend_labels)
 #+end_src
 
 **** Plotting $y(x_i)$ varying $\alpha$
+
 #+begin_src python :exports none :file ./images_week2/rangealpha_2d_log_y_i.png :tangle ./Week2Src.py
 alphas = [0.1, 0.2, 0.3, 0.4, 0.5]
 num_iters = 50
@@ -489,7 +546,71 @@ ax.legend(legend_labels)
 ** (i) Optimisng $y(x) = \gamma x^2$
 - Change to using function $y(x) = \gamma x^2$
   - How does changing gamma affect convergence
+
+$\frac{dy}{dx}(x)=2\gamma x$
+
+*** Code :noexport:
+#+begin_src python :exports none :results none :tangle ./Week2Src.py
+y = lambda x, gamma: gamma*x**2
+dy = lambda x, gamma: 2 * x * gamma
+alpha = 0.1
+x0 = 1
+num_iters = num_iters
+grad = lambda gamma : gradDesc3(f=lambda x : y(x, gamma),
+                                df=lambda x : dy(x, gamma),
+                                x0=x0,alpha=0.1,num_iters=num_iters)
+(X,F) = grad(0.5)
+
+ # then perform visualisations
+ # altering gamma
+#+end_src
 ** (ii) Optimising $y(x) = \gamma |x|$
 - Repeat for function $y(x) = \gamma |x|$
+*** Code :noexport:
+#+begin_src python :exports none :results none :tangle ./Week2Src.py
+y = lambda x, gamma: gamma * abs(x)
+dy = lambda x, gamma: gamma
+alpha = 0.1
+x0 = 1
+num_iters = num_iters
+grad = lambda gamma : gradDesc3(f=lambda x : y(x, gamma),
+                                df=lambda x : dy(x, gamma),
+                                x0=x0,alpha=0.1,num_iters=num_iters)
+(X,F) = grad(0.5)
 
-  
+ # then perform visualisations
+ # altering gamma
+#+end_src  
+* Appendix
+** Code Listing
+#+begin_export latex
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\lstinputlisting[language=Python]{Week2Src.py}
+
+%\inputminted{Python}{Week2Src.py}
+#+end_export
