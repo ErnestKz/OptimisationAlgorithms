@@ -151,6 +151,8 @@ ax.plot(xs, ys_finiteDiff, linewidth=2.0)
 ax.legend(("Symbolic", r'Finite Difference with $\delta = 0.01$'))
 axset(ax, xrange=2, xoffset=0, yrange=20, yoffset=0)
 
+# fig.show()
+
 # ax.set(
 #     xlim=(-3, 3),
 #     ylim=(-20, 20),
@@ -160,7 +162,7 @@ axset(ax, xrange=2, xoffset=0, yrange=20, yoffset=0)
 #+end_src
 
 #+RESULTS[2d869456c166a45429098fc3c2dee16639d62db6]:
-[[file:./images_week2/finite_difference.png]]
+: e9660c2b-dadf-4ccb-9aa2-c5310f059882
 
 ** (iii) Varying $\delta$ on Finite Difference
 As $\delta$ increases, we can see an offset to the curve.
@@ -551,8 +553,58 @@ $\frac{dy}{dx}(x)=2\gamma x$
 
 *** Code :noexport:
 #+begin_src python :exports none :results none :tangle ./Week2Src.py
-y = lambda x, gamma: gamma*x**2
-dy = lambda x, gamma: 2 * x * gamma
+def visualise_fn(fn, l=-10, r=10, n=1000):
+    xs = np.linspace(l, r, num=n)
+    y = np.array([fn(x) for x in xs])
+    plt.plot(xs,y); plt.show()
+#+end_src
+
+#+begin_src python :exports none :results none :tangle ./Week2Src.py
+def labels_fn(ax, legend, xaxis=r'$x$', yaxis=r'$y(x)$'):
+    ax.set_xlabel(xaxis)
+    ax.set_ylabel(yaxis)
+    ax.legend(legend)
+    
+def visualise_fns(fns, labels_fn=labels_fn, l=-10, r=10, n=1000):
+    xs = np.linspace(l, r, num=n)
+    ys = []
+    fig, ax = plt.subplots()
+    for fn in fns:
+        y = np.array([fn(x) for x in xs])
+        ax.plot(xs,y)
+    labels_fn(ax)
+
+fns_gamma = (lambda fn, gammas: [(lambda x, gamma=gamma: fn(x, gamma)) for gamma in gammas])    
+#+end_src
+
+#+begin_src python :exports none :results none :tangle ./Week2Src.py
+from jax import grad
+#+end_src
+
+#+begin_src python :exports none :results replace :tangle ./Week2Src.py
+# grad by default will take the derivative of the first parameter of the function that we pass
+y = lambda x, gamma: gamma * x**2
+dydx = grad(y)
+gammas = [0.1, 0.2, 1, 2]
+# gammas = [1]
+
+legend = [(r'$\gamma=$'+ str(gamma)) for gamma in gammas]
+
+labels_y = lambda ax: labels_fn(ax, legend, yaxis=r'$\gamma x^2$')
+labels_dy = lambda ax: labels_fn(ax, legend, yaxis=r'$2\gamma x$')
+
+visualise_fns(fns_gamma(dydx, gammas), labels_fn=labels_dy)
+visualise_fns(fns_gamma(y, gammas), labels_fn=labels_y)
+# visualise_fn(lambda x: dydx(x, 1))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+[[file:./.ob-jupyter/f3f306e7501601e5f980531f21d671c1014f3892.png]]
+[[file:./.ob-jupyter/5c6d9408712d72d6b9eb90cc7fb03c497c86fff7.png]]
+:END:
+
+#+begin_src python :exports none :results none :tangle ./Week2Src.py
 alpha = 0.1
 x0 = 1
 num_iters = num_iters
@@ -562,25 +614,36 @@ grad = lambda gamma : gradDesc3(f=lambda x : y(x, gamma),
 (X,F) = grad(0.5)
 
  # then perform visualisations
- # altering gamma
+ # The various tools to use to inspect the functions behaviour altering gamma
 #+end_src
+
 ** (ii) Optimising $y(x) = \gamma |x|$
 - Repeat for function $y(x) = \gamma |x|$
 *** Code :noexport:
-#+begin_src python :exports none :results none :tangle ./Week2Src.py
-y = lambda x, gamma: gamma * abs(x)
-dy = lambda x, gamma: gamma
-alpha = 0.1
-x0 = 1
-num_iters = num_iters
-grad = lambda gamma : gradDesc3(f=lambda x : y(x, gamma),
-                                df=lambda x : dy(x, gamma),
-                                x0=x0,alpha=0.1,num_iters=num_iters)
-(X,F) = grad(0.5)
 
- # then perform visualisations
- # altering gamma
-#+end_src  
+#+begin_src python :exports none :results replace :tangle ./Week2Src.py
+y = lambda x, gamma: gamma * abs(x)
+dydx = grad(y)
+
+gammas = [0.1, 0.2, 1, 2]
+legend = [(r'$\gamma=$'+ str(gamma)) for gamma in gammas]
+labels_y = lambda ax: labels_fn(ax, legend, yaxis=r'$\gamma |x|$')
+labels_dy = lambda ax: labels_fn(ax, legend, yaxis=r'$\gamma$')
+
+visualise_fns(fns_gamma(dydx, gammas), labels_fn=labels_dy)
+visualise_fns(fns_gamma(y, gammas), labels_fn=labels_y)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+[[file:./.ob-jupyter/0779b0050ae0a8eb9ab03c5d2ef6cc5e5515774a.png]]
+[[file:./.ob-jupyter/8798e176f2656cedddaed9b8ed8a0a269eabaee3.png]]
+:END:
+
+#+begin_src python :exports none :results replace :tangle ./Week2Src.py
+
+#+end_src
+
 * Appendix
 ** Code Listing
 #+begin_export latex
