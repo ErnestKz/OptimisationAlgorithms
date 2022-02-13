@@ -28,7 +28,6 @@
 }
 \lstset{style=mystyle}
 #+end_export
-
 * Preamble :noexport:
 #+PROPERTY: header-args:python :session a1
 #+PROPERTY: header-args:python+ :async yes
@@ -278,9 +277,10 @@ $x$ and $y(x)$ vary with each gradient descent iteration.
 #+attr_latex: :width 8cm
 [[file:images_week2/y_i.png]]
 
-- Figure [[fig:fx4]] plots the function to be optimised; it is convex, but there is a very flat portion at $-0.5 < x < 0.5$.
-- Figure [[fig:xi]] plots $x_i$ against $i$; $x_i$ decreases rapidly around 
-- Figure [[fig:yi]] plots $y$ against $i$.
+- Figure [[fig:fx4]] plots the function to be optimised; it is convex, but there is a very flat portion at $-0.5 < x < 0.5$. We know that the $argmin_x f(x)=0$ for this convex function.
+- Figure [[fig:xi]] plots $x_i$ against $i$; $x_i$ decreases rapidly on the very first iteration, reaching 40% of the way to 0, but then begins to slow down rapdily, this is because the slope of the function is significantly smaller at $x>0.6$ compared to at $x=1$, and the slope keeps on decreasing at a rate of $4x^3$, which is quite rapid for a constant $\alpha$, and the slope is important in the step as $step = \alpha * slope_{x_i}$.
+- Figure [[fig:yi]] plots $y$ against $i$; the majority of the optimisation happens in 2 iterations, and very little progress is made after $i=2$, it essentially comes to a flat line 10 iterations onward.
+We see that $x_i$ takes longer to become a flat line than $y(x_i)$, this is because of the flat shape of the bottom of $x^4$, once $x_i$ reaches the bottom, $x_i$ itself can still move a bit it will not have a equally proportional impact on $y(x_i)$.
 
 *** Plotting Code :noexport:
 **** Plotting $f(x)$ against $x$
@@ -296,7 +296,10 @@ ax.set_xlabel(r'$x$')
 
 ax.set_title(r'Function to be Optimised')
 ax.plot(xs, ys, linewidth=2.0)
-ax.legend(("$y(x) = x^4$",))
+ax.plot(1, y(1), 'go')
+ax.legend(("$y(x) = x^4$", r'$x_i = 1$'))
+
+# ax.axvline(x=1, color='k', linestyle='--')
 axset(ax, xrange=3, xoffset=0, yrange=1.5, yoffset=1.4)
 #+end_src
 
@@ -347,7 +350,8 @@ iters = np.arange(0, len(X))
 fig, ax = plt.subplots()
 ax.set_ylabel(r'$x_i$')
 ax.set_xlabel(r'$i$')
-ax.set_title(r'$x$ Value at Beginning of each Iteration')
+ax.set_title(r'$x$ Value at Beginning of each Iteration' "\n"
+             r'$x_0=1, \alpha=0.1 , y(x) = x^4$',)
 ax.axvline(x=2, color='k', linestyle='--')
 ax.plot(iters, X, linewidth=2.0)
 
@@ -356,14 +360,50 @@ ax.legend((r'$i=2$', r'$x_{i}$ = value of x at iteration $i$',))
 
 #+RESULTS:
 :RESULTS:
-: <matplotlib.legend.Legend at 0x7ff07041c790>
+: <matplotlib.legend.Legend at 0x7ff068531250>
 [[file:./images_week2/x_i.png]]
 :END:
 
 ** (iii) Varying Step Size $\alpha$ and $x_0$
 With an $\alpha=0.1$, $\frac{dy}{dx}(x)=4x^3$ is such an exponentialy increasing function that even a $x_0$.
-
 $\alpha$ and $x_0$ can be setup in such a way that it can make a jump over the exponentialy slowing gradient close to 0 and land on the minimum.
+
+
+#+caption: Varying $x_0$, plotting $x$
+#+LABEL: fig:varx0x
+#+attr_latex: :width 8cm
+[[file:./images_week2/rangex0_2d_x_i.png]]
+
+#+caption: Varying $x_0$, plotting y(x)
+#+LABEL: fig:varx0y
+#+attr_latex: :width 8cm
+[[file:./images_week2/rangex0_2d_y_i.png]]
+
+#+caption: Varying $x_0$, plotting y(x), non-convergance
+#+LABEL: fig:varx0ynon
+#+attr_latex: :width 8cm
+[[file:./images_week2/rangex0_2d_y_i_non.png]]
+
+
+#+caption: Varying $\alpha$, plotting x
+#+LABEL: fig:varax
+#+attr_latex: :width 8cm
+[[file:./images_week2/rangealpha_2d_x_i.png]]
+
+#+caption: Varying $\alpha$, plotting x
+#+LABEL: fig:varay
+#+attr_latex: :width 8cm
+[[file:./images_week2/rangealpha_2d_y_i.png]]
+
+
+- Varying $x_0$
+  - Plotting x: [[fig:varx0x]]
+  - Plotting y: [[fig:varx0y]]
+  - Plotting y: [[fig:varx0ynon]]
+
+- Varying $\alpha$
+  - Plotting x: [[fig:varax]]
+  - Plotting y: [[fig:varay]]
 
 *** Varying $\alpha$ and $x_0$ - Plotting Code                     :noexport:
 **** Plotting $x_i$ varying $x_0$
@@ -423,8 +463,9 @@ ax.set_zlabel(r'$x_i$')
 #+end_src
 
 #+begin_src python :exports none :file ./images_week2/rangex0_2d_x_i.png :tangle ./Week2Src.py
-x0s = [0.1, 0.5, 1, 1.5, 2]
-num_iters = 12
+x0s = [0.1, 0.5, 1, 1.5, 2, 2.236068]
+# 2.23607
+num_iters = 11
 
 Xs = np.array([])
 for x0 in x0s:
@@ -441,6 +482,8 @@ for x0 in x0s:
 fig, ax = plt.subplots()
 ax.set_ylabel(r'$x_i$')
 ax.set_xlabel(r'$i$')
+ax.set_title(r'Gradient Descent; $x_i$ vs. iteration; Varying $x_0$' "\n"
+              r'$ \alpha=0.1 , y(x) = x^4$',)
 legend_labels = []
 for (X, x0) in Xs:
     ax.plot(range(num_iters+1), X, linewidth=2.0)
@@ -451,7 +494,7 @@ ax.legend(legend_labels)
 **** Plotting $x_i$ varying $\alpha$
 #+begin_src python :exports none :file ./images_week2/rangealpha_2d_x_i.png :tangle ./Week2Src.py
 alphas = [0.1, 0.2, 0.3, 0.4, 0.5]
-num_iters =50
+num_iters = 10
 
 Xs = np.array([])
 for alpha in alphas:
@@ -468,6 +511,8 @@ for alpha in alphas:
 fig, ax = plt.subplots()
 ax.set_ylabel(r'$x_i$')
 ax.set_xlabel(r'$i$')
+ax.set_title(r'Gradient Descent; $x_i$ vs. iteration; Varying $\alpha$' "\n"
+             r'$ x_0=1 , y(x) = x^4$',)
 legend_labels = []
 for (X, alpha) in Xs:
     ax.plot(range(num_iters+1), X, linewidth=2.0)
@@ -476,9 +521,10 @@ ax.legend(legend_labels)
 #+end_src
 
 **** Plotting $y(x_i)$ varying $x_0$
+
 #+begin_src python :exports none :file ./images_week2/rangex0_2d_y_i.png :tangle ./Week2Src.py
 x0s = [0.1, 0.5, 1, 1.5, 2]
-num_iters = 12
+num_iters = 4
 
 Ys = np.array([])
 for x0 in x0s:
@@ -495,6 +541,36 @@ for x0 in x0s:
 fig, ax = plt.subplots()
 ax.set_ylabel(r'$y(x_i)$')
 ax.set_xlabel(r'$i$')
+ax.set_title(r'Gradient Descent; $y(x_i)$ vs. iteration; Varying $x_0$' "\n"
+              r'$ \alpha=0.1 , y(x) = x^4$',)
+legend_labels = []
+for (Y, x0) in Ys:
+    ax.plot(range(num_iters+1), Y, linewidth=2.0)
+    legend_labels += [(r' $x_{0}$ = ' + str(x0))]
+ax.legend(legend_labels)
+#+end_src
+
+#+begin_src python :exports none :file ./images_week2/rangex0_2d_y_i_non.png :tangle ./Week2Src.py
+x0s = [0.1, 0.5, 1, 1.5, 2, 2.236068]
+num_iters = 11
+
+Ys = np.array([])
+for x0 in x0s:
+    (_, Y) = gradDesc3(lambda x : x**4,
+                       lambda x : 4*x**3,
+                       x0=x0,
+                       alpha=0.1,
+                       num_iters=num_iters)
+    if len(Ys) > 0:
+        Ys = np.append(Ys, [(Y,x0)],  axis=0)
+    else:
+        Ys = np.array([(Y, x0)])
+
+fig, ax = plt.subplots()
+ax.set_ylabel(r'$y(x_i)$')
+ax.set_xlabel(r'$i$')
+ax.set_title(r'Gradient Descent; $y(x_i)$ vs. iteration; Varying $x_0$; non-convergance' "\n"
+              r'$ \alpha=0.1 , y(x) = x^4$',)
 legend_labels = []
 for (Y, x0) in Ys:
     ax.plot(range(num_iters+1), Y, linewidth=2.0)
@@ -530,9 +606,9 @@ ax.legend(legend_labels)
 
 **** Plotting $y(x_i)$ varying $\alpha$
 
-#+begin_src python :exports none :file ./images_week2/rangealpha_2d_log_y_i.png :tangle ./Week2Src.py
+#+begin_src python :exports none :file ./images_week2/rangealpha_2d_y_i.png :tangle ./Week2Src.py
 alphas = [0.1, 0.2, 0.3, 0.4, 0.5]
-num_iters = 50
+num_iters = 6
 
 Ys = np.array([])
 for alpha in alphas:
@@ -547,14 +623,25 @@ for alpha in alphas:
         Ys = np.array([(Y, alpha)])
 
 fig, ax = plt.subplots()
-ax.set_ylabel(r'$x_i$')
+ax.set_ylabel(r'$y(x_i)$')
 ax.set_xlabel(r'$i$')
+ax.set_title(r'Gradient Descent; $y(x_i)$ vs. iteration; Varying $\alpha$' "\n"
+             r'$ x_0=1 , y(x) = x^4$',)
 legend_labels = []
 for (Y, alpha) in Ys:
-    ax.semilogy(range(num_iters+1), Y, linewidth=2.0)
+    ax.plot(range(num_iters+1), Y, linewidth=2.0)
     legend_labels += [(r' $\alpha$ = ' + str(alpha))]
 ax.legend(legend_labels)
 #+end_src
+
+#+RESULTS:
+:RESULTS:
+: /tmp/ipykernel_198847/2328935889.py:14: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.
+:   Ys = np.array([(Y, alpha)])
+: <__array_function__ internals>:5: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.
+: <matplotlib.legend.Legend at 0x7fefe9eb7a30>
+[[file:./images_week2/rangealpha_2d_y_i.png]]
+:END:
 
 * (c) Optimising $y(x) = \gamma x^2$ and $y(x) = \gamma |x|$
 ** (i) Optimisng $y(x) = \gamma x^2$
@@ -565,13 +652,13 @@ $\frac{dy}{dx}(x)=2\gamma x$
 
 *** Code :noexport:
 #+begin_src python :exports none :results none :tangle ./Week2Src.py
+from jax import grad
+
 def visualise_fn(fn, l=-10, r=10, n=1000):
     xs = np.linspace(l, r, num=n)
     y = np.array([fn(x) for x in xs])
     plt.plot(xs,y); plt.show()
-#+end_src
 
-#+begin_src python :exports none :results none :tangle ./Week2Src.py
 def labels_fn(ax, legend, xaxis=r'$x$', yaxis=r'$y(x)$'):
     ax.set_xlabel(xaxis)
     ax.set_ylabel(yaxis)
@@ -586,11 +673,7 @@ def visualise_fns(fns, labels_fn=labels_fn, l=-10, r=10, n=1000):
         ax.plot(xs,y)
     labels_fn(ax)
 
-fns_gamma = (lambda fn, gammas: [(lambda x, gamma=gamma: fn(x, gamma)) for gamma in gammas])    
-#+end_src
-
-#+begin_src python :exports none :results none :tangle ./Week2Src.py
-from jax import grad
+fns_gamma = (lambda fn, gammas: [(lambda x, gamma=gamma: fn(x, gamma)) for gamma in gammas])
 #+end_src
 
 #+begin_src python :exports none :results replace :tangle ./Week2Src.py
@@ -609,12 +692,6 @@ visualise_fns(fns_gamma(dydx, gammas), labels_fn=labels_dy)
 visualise_fns(fns_gamma(y, gammas), labels_fn=labels_y)
 # visualise_fn(lambda x: dydx(x, 1))
 #+end_src
-
-#+RESULTS:
-:RESULTS:
-[[file:./.ob-jupyter/f3f306e7501601e5f980531f21d671c1014f3892.png]]
-[[file:./.ob-jupyter/5c6d9408712d72d6b9eb90cc7fb03c497c86fff7.png]]
-:END:
 
 #+begin_src python :exports none :results none :tangle ./Week2Src.py
 alpha = 0.1
@@ -644,16 +721,6 @@ labels_dy = lambda ax: labels_fn(ax, legend, yaxis=r'$\gamma$')
 
 visualise_fns(fns_gamma(dydx, gammas), labels_fn=labels_dy)
 visualise_fns(fns_gamma(y, gammas), labels_fn=labels_y)
-#+end_src
-
-#+RESULTS:
-:RESULTS:
-[[file:./.ob-jupyter/0779b0050ae0a8eb9ab03c5d2ef6cc5e5515774a.png]]
-[[file:./.ob-jupyter/8798e176f2656cedddaed9b8ed8a0a269eabaee3.png]]
-:END:
-
-#+begin_src python :exports none :results replace :tangle ./Week2Src.py
-
 #+end_src
 
 * Appendix
