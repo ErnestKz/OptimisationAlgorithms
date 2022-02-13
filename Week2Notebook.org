@@ -111,6 +111,8 @@ The python function that computes the finite difference of a function:
   - x = input value for the function
   - delta ($\delta$) = perturbation 
 - The difference between f at x and f at (x - perturbation) is computed, and divded by perturbation to find out the slope in the span of the perturbation.
+
+- $\frac{f(x) - f(x - \delta)}{\delta}$ 
 #+begin_src python :results none :exports code :tangle ./Week2Src.py
 def finiteDiff(f, x, delta):
     return (f(x) - f(x - delta)) / delta
@@ -144,7 +146,7 @@ for x in xs:
 fig, ax = plt.subplots()
 ax.set_ylabel(r'$\frac{dy}{dx}(x)$')
 ax.set_xlabel(r'$x$')
-# ax.set_title(r'Finite Difference vs. Symbolic Derivative'  "\n" r'for $y(x) = x^4$')
+ax.set_title(r'Finite Difference vs. Symbolic Derivative'  "\n" r'for $y(x) = x^4$')
 
 ax.plot(xs, ys_sym, linewidth=2.0)
 ax.plot(xs, ys_finiteDiff, linewidth=2.0)
@@ -162,7 +164,7 @@ axset(ax, xrange=2, xoffset=0, yrange=20, yoffset=0)
 #+end_src
 
 #+RESULTS[2d869456c166a45429098fc3c2dee16639d62db6]:
-: e9660c2b-dadf-4ccb-9aa2-c5310f059882
+[[file:./images_week2/finite_difference.png]]
 
 ** (iii) Varying $\delta$ on Finite Difference
 As $\delta$ increases, we can see an offset to the curve.
@@ -183,6 +185,9 @@ for delta in deltas:
   ys_finiteDiffs.append((ys_finiteDiff_tmp, delta))
 
 fig, ax = plt.subplots()
+ax.set_title(r'Varying $\delta$ on Finite Difference'  "\n" r'for $y(x) = x^4$')
+ax.set_ylabel(r'$\frac{y(x) - y(x - \delta)}{\delta}$')
+ax.set_xlabel(r'$x$')
 legend_labels = []  
 for (ys, delta) in ys_finiteDiffs:
     legend_labels += [r'$\delta = $' + str(delta)]
@@ -191,9 +196,6 @@ for (ys, delta) in ys_finiteDiffs:
 ax.legend(legend_labels)
 axset(ax, xrange=3, xoffset=1.5, yrange=20, yoffset=10)
 #+end_src
-
-#+RESULTS:
-[[file:./images_week2/varying_delta.png]]
 
 * (b) Gradient Descent Optimisation Algorithm
 ** (i) Gradient Descent Implementation
@@ -258,19 +260,27 @@ x = gradient_descent(fn.df, 1)
 #+RESULTS:
 
 ** (ii) Visualising Gradient Descent
-$x_0=1$
-$\alpha=0.1$
-$y(x) = x^4$
+Gradient Descent is run with, $x_0=1$, $\alpha=0.1$, $y(x) = x^4$.
+$x$ and $y(x)$ vary with each gradient descent iteration.
 
-How $x$ and $y(x)$ vary with each gradient descent iteration.
+#+caption: Function to be Optimised
+#+LABEL: fig:fx4
+#+ATTR_LATEX: :width 8cm 
+[[file:images_week2/x_4.png]]
 
-What are the plots I can put here?
-- x on y-axis, i on x-axis
-- y(x) on y-axis, i on x-axis
-- log(y(x)) on y-axis, i on x-axis
+#+caption: $x$ against $i$
+#+LABEL: fig:xi
+#+attr_latex: :width 8cm
+[[file:images_week2/x_i.png]]
 
-- x=x-axis, f(x)=y-axis
-  - then another lines showing steps taken
+#+caption: $y(x_i)$ against $i$
+#+LABEL: fig:yi
+#+attr_latex: :width 8cm
+[[file:images_week2/y_i.png]]
+
+- Figure [[fig:fx4]] plots the function to be optimised; it is convex, but there is a very flat portion at $-0.5 < x < 0.5$.
+- Figure [[fig:xi]] plots $x_i$ against $i$; $x_i$ decreases rapidly around 
+- Figure [[fig:yi]] plots $y$ against $i$.
 
 *** Plotting Code :noexport:
 **** Plotting $f(x)$ against $x$
@@ -284,8 +294,9 @@ fig, ax = plt.subplots()
 ax.set_ylabel(r'$y(x)$')
 ax.set_xlabel(r'$x$')
 
+ax.set_title(r'Function to be Optimised')
 ax.plot(xs, ys, linewidth=2.0)
-ax.legend(("y(x)", r'Finite Difference with $\delta = 0.01$'))
+ax.legend(("$y(x) = x^4$",))
 axset(ax, xrange=3, xoffset=0, yrange=1.5, yoffset=1.4)
 #+end_src
 
@@ -295,39 +306,38 @@ axset(ax, xrange=3, xoffset=0, yrange=1.5, yoffset=1.4)
 **** Plotting $f(x_i)$ against $i$
 #+begin_src python :exports none :file ./images_week2/y_i.png :tangle ./Week2Src.py
 (_, F) = gradDesc3(y, dydx, x0=1, alpha=0.1)
-iters = np.arange(0, len(X))
+iters = np.arange(0, len(F))
 
 fig, ax = plt.subplots()
 ax.set_ylabel(r'$y(x_{i})$')
 ax.set_xlabel(r'$i$')
-
+ax.set_title(r'Gradient Descent; function value vs. iteration' "\n"
+              r'$x_0=1, \alpha=0.1 , y(x) = x^4$',)
 ax.plot(iters, F, linewidth=2.0)
-ax.legend((r'$y(x_{i})$ where $x_i=$ value of x at iteration $i$',))
+ax.axvline(x=2, color='k', linestyle='--')
+
+ax.legend((r'$y(x_{i})$ where $x_i=$ value of x at iteration $i$', r'$i=2$', ))
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-: <matplotlib.legend.Legend at 0x7f3302e35a30>
+: <matplotlib.legend.Legend at 0x7ff0683b39a0>
 [[file:./images_week2/y_i.png]]
 :END:
 
 #+begin_src python :exports none :file ./images_week2/logy_i.png :tangle ./Week2Src.py
 (_, F) = gradDesc3(y, dydx, x0=1, alpha=0.1)
-iters = np.arange(0, len(X))
+iters = np.arange(0, len(F))
 
 fig, ax = plt.subplots()
 ax.set_ylabel(r'$y(x_{i})$')
 ax.set_xlabel(r'$i$')
+ax.set_title(r'Gradient Descent; function value vs. iteration; log scale' "\n"
+              r'$x_0=1, \alpha=0.1 , y(x) = x^4$',)
 
 ax.semilogy(iters, F, linewidth=2.0)
 ax.legend((r'$y(x_{i})$ where $x_i=$ value of x at iteration $i$',))
 #+end_src
-
-#+RESULTS:
-:RESULTS:
-: <matplotlib.legend.Legend at 0x7f3302f8ba60>
-[[file:./images_week2/logy_i.png]]
-:END:
 
 **** Plotting $x_i$ against $i$
 #+begin_src python :exports none :file ./images_week2/x_i.png :tangle ./Week2Src.py
@@ -337,14 +347,16 @@ iters = np.arange(0, len(X))
 fig, ax = plt.subplots()
 ax.set_ylabel(r'$x_i$')
 ax.set_xlabel(r'$i$')
-
+ax.set_title(r'$x$ Value at Beginning of each Iteration')
+ax.axvline(x=2, color='k', linestyle='--')
 ax.plot(iters, X, linewidth=2.0)
-ax.legend((r'$x_{i}$ = value of x at iteration $i$',))
+
+ax.legend((r'$i=2$', r'$x_{i}$ = value of x at iteration $i$',))
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-: <matplotlib.legend.Legend at 0x7f3307f63cd0>
+: <matplotlib.legend.Legend at 0x7ff07041c790>
 [[file:./images_week2/x_i.png]]
 :END:
 
