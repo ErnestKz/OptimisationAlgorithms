@@ -105,24 +105,28 @@ dydx = sympy.lambdify(x, dydx)
 
 ** (ii) Finite Difference Implementation
 The python function that computes the finite difference of a function:
-- Inputs to the function are:
-  - f = the function
-  - x = input value for the function
-  - delta ($\delta$) = perturbation 
-- The difference between f at x and f at (x - perturbation) is computed, and divded by perturbation to find out the slope in the span of the perturbation.
-
-- $\frac{f(x) - f(x - \delta)}{\delta}$ 
+- Inputs are:
+  - $f$: the function
+  - $x$: input value for the function
+  - $\delta$: the perturbation 
+- The finite difference can be implemented as $\frac{f(x) - f(x - \delta)}{\delta}$
+-  $\frac{f(x + \delta) - f(x - \delta)}{2 * \delta}$ could be used to negate the offset (perturbation is $2*\delta$ in this case).
+- Finite difference nudges a function a tiny bit in a direction and then divides by that difference to find by how much the function value changed relative to that nudge, giving the slope.
+  
 #+begin_src python :results none :exports code :tangle ./Week2Src.py
 def finiteDiff(f, x, delta):
     return (f(x) - f(x - delta)) / delta
 #+end_src
 
-Range of values x, calculate derivative of the function using sympy and through finiteDiffs with $\delta=0.01$.
-Resulting values are plotted and compared.
+#+begin_src python :results none :exports none :tangle ./Week2Src.py
+def finiteDiff(f, x, delta):
+    return (f(x + delta) - f(x - delta)) / (2 * delta)
+#+end_src
 
-The finite difference method with $\delta=0.01$ generates a curve very close to the symoblic one, although a slight fringe of blue is seen at $x>1$ and $x<1$.
+Fig [[fig:fd]] shows finite difference method with $\delta=0.01$ generates a curve almost identical to the symoblic one, although a slight fringe of blue is seen at $x>1$ and $x<-1$, indicating the tiny offset caused by the nudge in one direction.
 
 #+caption: Finite Difference vs. Symbolic Derivative; for $y(x) = x^4$
+#+LABEL: fig:fd
 #+attr_latex: :width 8cm :options angle=0
 [[file:./images_week2/finite_difference.png]]
 
@@ -162,50 +166,60 @@ axset(ax, xrange=2, xoffset=0, yrange=20, yoffset=0)
 #      )
 #+end_src
 
-#+RESULTS[2d869456c166a45429098fc3c2dee16639d62db6]:
-[[file:./images_week2/finite_difference.png]]
-
 ** (iii) Varying $\delta$ on Finite Difference
-As $\delta$ increases, we can see an offset to the curve.
-
+In [[fig:fd2]], as $\delta$ increases, we can see the error getting bigger an bigger for values that are away from $x=0$. Error is bigger further away as a nudge in $x$ causes a larger change. A $\delta<0.01$, seems to produce little error even at large $x$.
 #+caption: Varying $\delta$ on finite difference method.
+#+LABEL: fig:fd2
 #+attr_latex: :width 8cm :options angle=0
 [[file:images_week2/varying_delta.png]]
 
 *** Varying $\delta$ on Finite Difference Plotting Code            :noexport:
 #+begin_src python :exports none :file ./images_week2/varying_delta.png :tangle ./Week2Src.py 
-ys_finiteDiffs = []
-deltas = [0.001, 0.01, 0.1, 0.5, 1]
+dydx = lambda x: 4 * x**3
+y = lambda x: x**4
 
+xs = np.arange(-20, 20, 0.1)
+
+deltas = [0.001, 0.01, 0.1, 0.5, 1]
+ys_dif = []
 for delta in deltas:
-  ys_finiteDiff_tmp = []
+  dif = []
   for x in xs:
-      ys_finiteDiff_tmp.append(finiteDiff(y, x, delta))
-  ys_finiteDiffs.append((ys_finiteDiff_tmp, delta))
+      fd = finiteDiff(y, x, delta)
+      ex = dydx(x)
+      dif += [ex - fd]
+      
+  ys_dif += [(dif, delta)]
 
 fig, ax = plt.subplots()
-ax.set_title(r'Varying $\delta$ on Finite Difference'  "\n" r'for $y(x) = x^4$')
-ax.set_ylabel(r'$\frac{y(x) - y(x - \delta)}{\delta}$')
-ax.set_xlabel(r'$x$')
 legend_labels = []  
-for (ys, delta) in ys_finiteDiffs:
+for (diff, delta) in ys_dif:
     legend_labels += [r'$\delta = $' + str(delta)]
-    ax.plot(xs, ys, linewidth=2.0)
+    ax.plot(xs, diff, linewidth=2.0)
 
+ax.set_title(r'Varying $\delta$ on diffs f.d vs. sympy'  "\n" r'for $y(x) = x^4$')
+ax.set_ylabel(r'sympy - f.d ')
+ax.set_xlabel(r'$x$')
 ax.legend(legend_labels)
-axset(ax, xrange=3, xoffset=1.5, yrange=20, yoffset=10)
+# axset(ax, xrange=3, xoffset=1.5, yrange=20, yoffset=10)
 #+end_src
+
+#+RESULTS:
+:RESULTS:
+: <matplotlib.legend.Legend at 0x7ff0480d0e20>
+[[file:./images_week2/varying_delta.png]]
+:END:
 
 * (b) Gradient Descent Optimisation Algorithm
 ** (i) Gradient Descent Implementation
 Gradient descent (g.d) finds the $x$ that minimises some function $f(x)$ i.e g.d finds $argmin_x f(x)$.
-The implementation uses the derivative of $f(x)$ i.e $\frac{df}{dx}(x)$.
-g.d also requires a starting $x$ value i.e $x_{0}$.
-For some defined number of iterations $i_{max}$, g.d iteratively adjusts $x_i$.
-One iteration approximates how to modify $x_i$ in order to move towards the minumum of $f(x)$.
-Approximating is acomplished by using $\frac{df}{dx}(x)$ to find the slope of the curve at point $x_i$, and using the slope as the local approximation for which direction relative to the point $f(x_i)$, the minimum of $f(x)$ lies.
-A step size for $x_i$ is calculated by multiplying $\frac{df}{dx}(x)$ by some scalar $\alpha$, in this case $\alpha$ is manually picked and stays constant throughout all the iterations, although the magnitude of $\frac{df}{dx}(x)$ itself may change and alter the step magnitude.
-The negative of $\frac{df}{dx}(x_i)$ guarantees an instantaneous step for $x_{i}$ in the downwards direction for $f(x_i)$. $x_{i+1} = x_{i} + step$, and the process is repeated.
+- The implementation uses the derivative of $f(x)$ i.e $\frac{df}{dx}(x)$.
+- g.d requires a starting $x$ value i.e $x_{0}$.
+- For some defined number of iterations $i_{max}$, g.d iteratively adjusts $x_i$.
+- One iteration approximates how to modify $x_i$ in order to move towards the minumum of $f(x)$.
+- Approximating is acomplished by using $\frac{df}{dx}(x)$ to find the slope of the curve at point $x_i$, and using the slope as the local approximation for which direction relative to the point $f(x_i)$, the minimum of $f(x)$ lies.
+- A step size for $x_i$ is calculated by multiplying $\frac{df}{dx}(x)$ by some scalar $\alpha$, in this case $\alpha$ is manually picked and stays constant throughout all the iterations, although the magnitude of $\frac{df}{dx}(x)$ itself may change and alter the step magnitude.
+- The negative of $\frac{df}{dx}(x_i)$ guarantees an instantaneous step for $x_{i}$ in the downwards direction for $f(x_i)$. $x_{i+1} = x_{i} + step$, and the process is repeated.
 
 #+begin_src python :results none :exports code :tangle ./Week2Src.py
 def gradient_descent(df, x0, alpha=0.15, i_max=50):
@@ -277,10 +291,10 @@ $x$ and $y(x)$ vary with each gradient descent iteration.
 #+attr_latex: :width 8cm
 [[file:images_week2/y_i.png]]
 
-- Figure [[fig:fx4]] plots the function to be optimised; it is convex, but there is a very flat portion at $-0.5 < x < 0.5$. We know that the $argmin_x f(x)=0$ for this convex function.
+- Figure [[fig:fx4]] plots the function to be optimised; it is convex, but there is a very flat portion at $-0.5 < x < 0.5$. We know that the $argmin_x f(x)=0$ for this function.
 - Figure [[fig:xi]] plots $x_i$ against $i$; $x_i$ decreases rapidly on the very first iteration, reaching 40% of the way to 0, but then begins to slow down rapdily, this is because the slope of the function is significantly smaller at $x>0.6$ compared to at $x=1$, and the slope keeps on decreasing at a rate of $4x^3$, which is quite rapid for a constant $\alpha$, and the slope is important in the step as $step = \alpha * slope_{x_i}$.
-- Figure [[fig:yi]] plots $y$ against $i$; the majority of the optimisation happens in 2 iterations, and very little progress is made after $i=2$, it essentially comes to a flat line 10 iterations onward.
-We see that $x_i$ takes longer to become a flat line than $y(x_i)$, this is because of the flat shape of the bottom of $x^4$, once $x_i$ reaches the bottom, $x_i$ itself can still move a bit it will not have a equally proportional impact on $y(x_i)$.
+- Figure [[fig:yi]] plots $y$ against $i$; the majority of the optimisation happens in 2 iterations, and very little progress is made after $i=2$, it essentially comes to a flat line 3 iterations onward.
+We see that $x_i$ takes longer to become a flat line than $y(x_i)$, this is because of the flat shape of the bottom of $x^4$. Once $x_i$ reaches the bottom, $x_i$ itself can still move a bit, but will not have a equally proportional impact on $y(x_i)$.
 
 *** Plotting Code :noexport:
 **** Plotting $f(x)$ against $x$
@@ -365,9 +379,6 @@ ax.legend((r'$i=2$', r'$x_{i}$ = value of x at iteration $i$',))
 :END:
 
 ** (iii) Varying Step Size $\alpha$ and $x_0$
-With an $\alpha=0.1$, $\frac{dy}{dx}(x)=4x^3$ is such an exponentialy increasing function that even a $x_0$.
-$\alpha$ and $x_0$ can be setup in such a way that it can make a jump over the exponentialy slowing gradient close to 0 and land on the minimum.
-
 
 #+caption: Varying $x_0$, plotting $x$
 #+LABEL: fig:varx0x
@@ -390,21 +401,21 @@ $\alpha$ and $x_0$ can be setup in such a way that it can make a jump over the e
 #+attr_latex: :width 8cm
 [[file:./images_week2/rangealpha_2d_x_i.png]]
 
-#+caption: Varying $\alpha$, plotting x
+#+caption: Varying $\alpha$, plotting (y)
 #+LABEL: fig:varay
 #+attr_latex: :width 8cm
 [[file:./images_week2/rangealpha_2d_y_i.png]]
 
 
 - Varying $x_0$
-  - Plotting x: [[fig:varx0x]]
-  - Plotting y: [[fig:varx0y]]
-  - Plotting y: [[fig:varx0ynon]]
+  - Plotting x - Fig. [[fig:varx0x]]: We can see that $x_0>2.236068$ would lead to an explosive non-convergance; it keeps jumping over to the other side of the curve, higher than what it was before. This is because the combination of the slope at $x>2.236068$ is too high in magnitude for the combination with $alpha=0.1$ and therefore results in too large of a step size. $x_0=2$ jumps over to the other side, but not higher than it was before and still manages to converge. Once the $x_i$ reaches within $-0.5<x<0.5$, the size of the slope is tiny relative to the $\alpha$, and essentially stops making progress.
+  - Plotting y that converge - Fig. [[fig:varx0y]]: We see that even though $x_i$ dont converge on the same point for different $x_0$, they all converge on paractically the same $y$ value, and all of them within only 2 iterations.
+  - Plotting y that doesn't converge - Fig. [[fig:varx0ynon]]: We can see that $x_0>2.236068$ will not converge, the function value keeps increasing due to the larger and larger jumps to each side of the convex function.
 
 - Varying $\alpha$
-  - Plotting x: [[fig:varax]]
-  - Plotting y: [[fig:varay]]
-
+  - Plotting x - Fig. [[fig:varax]]: An $\alpha>0.5$ would lead to an explosive non convergence, as it would cause jumps to the other side to a higher y value. Rest of the $\alpha$ converge, but it seems like the very first jump determines where its going to get stuck in the flat region.
+  - Plotting y - Fig. [[fig:varay]]: $\alpha>0.5$ shows non-convergance, and the rest of the $\alpha 's$ converge closely to each other. $\alpha=0.1$ makes keeps making progress even after 5 iterations in, seems like it's the nature of the rapidly flattening function rather than a small constant $\alpha$ that causes the slowdown of the convergance.
+Both $x_0$ and $\alpha$ cause un-forgiving explosions if not chosen small enough, but as long as the first step size is small enough, they converge to practically the same y value. The functions rapidly decreasing slope, rather than the chosen constant $\alpha$ value, is what causes the quicksand behaviour towards the minimum, a small alpha will allow for more flexible placement of $x_i$ / $x_0$ as it'll be less likely to shoot off exponentially, while still being able to converge. But this is just the behavoiur of $x^4$.
 *** Varying $\alpha$ and $x_0$ - Plotting Code                     :noexport:
 **** Plotting $x_i$ varying $x_0$
 #+begin_src python :exports none :file ./images_week2/rangex0_3d_x_i.png :tangle ./Week2Src.py
@@ -644,7 +655,7 @@ ax.legend(legend_labels)
 :END:
 
 * (c) Optimising $y(x) = \gamma x^2$ and $y(x) = \gamma |x|$
-** (i) Optimisng $y(x) = \gamma x^2$
+** (i) Optimising $y(x) = \gamma x^2$
 - Change to using function $y(x) = \gamma x^2$
   - How does changing gamma affect convergence
 
@@ -756,3 +767,4 @@ visualise_fns(fns_gamma(y, gammas), labels_fn=labels_y)
 
 %\inputminted{Python}{Week2Src.py}
 #+end_export
+ 
