@@ -38,6 +38,20 @@
 #+LaTeX_HEADER: \usepackage{listings}
 #+LaTeX_HEADER: \usepackage{xcolor}
 #+LaTeX_HEADER: \usepackage{minted}
+# #+LaTeX_HEADER: \usepackage{subfig}
+#+LaTeX_HEADER: \usepackage{subcaption}
+#+LaTeX_HEADER: \usepackage[a4paper, total={7.2in, 10.2in}]{geometry}
+
+
+# \usepackage{natbib}
+# \usepackage[margin=0.5in]{geometry}
+# \usepackage{amsmath} 
+# \usepackage{graphicx}
+# \usepackage{ragged2e}
+# \usepackage{subcaption}
+# \usepackage{grffile}
+# \usepackage{cleveref}
+
 
 #+begin_src elisp :results none :exports none
 (setq-local org-image-actual-width '(512))
@@ -276,25 +290,123 @@ x = gradient_descent(fn.df, 1)
 Gradient Descent is run with, $x_0=1$, $\alpha=0.1$, $y(x) = x^4$.
 $x$ and $y(x)$ vary with each gradient descent iteration.
 
-#+caption: Function to be Optimised
-#+LABEL: fig:fx4
-#+ATTR_LATEX: :width 8cm 
-[[file:images_week2/x_4.png]]
-
-#+caption: $x$ against $i$
-#+LABEL: fig:xi
-#+attr_latex: :width 8cm
-[[file:images_week2/x_i.png]]
-
-#+caption: $y(x_i)$ against $i$
-#+LABEL: fig:yi
-#+attr_latex: :width 8cm
-[[file:images_week2/y_i.png]]
 
 - Figure [[fig:fx4]] plots the function to be optimised; it is convex, but there is a very flat portion at $-0.5 < x < 0.5$. We know that the $argmin_x f(x)=0$ for this function.
 - Figure [[fig:xi]] plots $x_i$ against $i$; $x_i$ decreases rapidly on the very first iteration, reaching 40% of the way to 0, but then begins to slow down rapdily, this is because the slope of the function is significantly smaller at $x>0.6$ compared to at $x=1$, and the slope keeps on decreasing at a rate of $4x^3$, which is quite rapid for a constant $\alpha$, and the slope is important in the step as $step = \alpha * slope_{x_i}$.
 - Figure [[fig:yi]] plots $y$ against $i$; the majority of the optimisation happens in 2 iterations, and very little progress is made after $i=2$, it essentially comes to a flat line 3 iterations onward.
 We see that $x_i$ takes longer to become a flat line than $y(x_i)$, this is because of the flat shape of the bottom of $x^4$. Once $x_i$ reaches the bottom, $x_i$ itself can still move a bit, but will not have a equally proportional impact on $y(x_i)$.
+
+
+
+
+#+begin_export latex
+%\begin{figure}%
+%    \centering
+%    \subfloat[\centering label 1]{{\includegraphics[width=5cm]{images_week2/x_4.png} }}%
+%    \qquad
+%    \subfloat[\centering label 2]{{\includegraphics[width=5cm]{images_week2/x_i.png} }}%
+%    \caption{2 Figures side by side}%
+%    \label{fig:example}%
+%\end{figure}
+%
+%\begin{figure}
+%\centering
+%\subcaptionbox{Subcaption A}{\includegraphics[width=0.40\textwidth]{images_week2/x_4.png}}%
+%\hfill
+%\subcaptionbox{Subcaption B}{\includegraphics[width=0.40\textwidth]{images_week2/x_4.png}}%
+%\hfill
+%\subcaptionbox{Subcaption C}{\includegraphics[width=0.40\textwidth]{images_week2/x_4.png}}%
+%% \hfill
+%% \subcaptionbox{Subcaption D}{\includegraphics[width=0.20\textwidth]{images_week2/x_4.png}}%
+%\caption{Caption}
+%\end{figure}
+
+\begin{figure}[h]
+\centering
+\parbox{.9\textwidth}{
+            \begin{subfigure}{.475\linewidth}
+                \includegraphics[width=\textwidth]{images_week2/x_4.png}
+                \caption{Test 1}
+        \end{subfigure}
+        \begin{subfigure}{.475\linewidth}
+                \includegraphics[width=\textwidth]{images_week2/x_4.png}
+                \caption{Test 2}
+        \end{subfigure}\\
+        \begin{subfigure}{.475\linewidth}
+                \includegraphics[width=\textwidth]{images_week2/x_4.png}
+                \caption{Test 3}
+        \end{subfigure}
+        \begin{subfigure}{.475\linewidth}
+                \includegraphics[width=\textwidth]{images_week2/x_4.png}
+                \caption{Test 4}
+        \end{subfigure}
+        }
+     \caption{Simulation of model described by ODE1}\label{reduced}
+
+\parbox{.9\textwidth}{
+            \begin{subfigure}{.475\linewidth}
+                \includegraphics[width=\textwidth]{images_week2/x_4.png}
+                \caption{Test 1}
+        \end{subfigure}
+        \begin{subfigure}{.475\linewidth}
+                \includegraphics[width=\textwidth]{images_week2/x_4.png}
+                \caption{Test 2}
+        \end{subfigure}\\
+        \begin{subfigure}{.475\linewidth}
+                \includegraphics[width=\textwidth]{images_week2/x_4.png}
+                \caption{Test 3}
+        \end{subfigure}
+        \begin{subfigure}{.475\linewidth}
+                \includegraphics[width=\textwidth]{images_week2/x_4.png}
+                \caption{Test 4}
+        \end{subfigure}
+        }
+     \caption{Simulation of model described by ODE1}\label{reduced}     
+\end{figure}
+
+#+end_export
+
+
+#+caption: Function to be Optimised
+#+LABEL: fig:fx4
+#+ATTR_LATEX: :height 0.2\textwidth :center
+[[file:images_week2/x_4.png]]
+
+#+caption: $x$ against $i$
+#+LABEL: fig:xi
+#+attr_latex: :height 0.2\textwidth :center
+[[file:images_week2/x_i.png]]
+
+#+caption: $y(x_i)$ against $i$
+#+LABEL: fig:yi
+#+attr_latex: :height 0.2\textwidth :center
+[[file:images_week2/y_i.png]]
+
+#+caption: Varying $x_0$, plotting $x$
+#+LABEL: fig:varx0x
+#+attr_latex: :width 8cm :float wrap
+[[file:./images_week2/rangex0_2d_x_i.png]]
+
+#+caption: Varying $x_0$, plotting y(x)
+#+LABEL: fig:varx0y
+#+attr_latex: :width 8cm :float wrap
+[[file:./images_week2/rangex0_2d_y_i.png]]
+
+#+caption: Varying $x_0$, plotting y(x), non-convergance
+#+LABEL: fig:varx0ynon
+#+attr_latex: :width 8cm :float wrap
+[[file:./images_week2/rangex0_2d_y_i_non.png]]
+
+
+#+caption: Varying $\alpha$, plotting x
+#+LABEL: fig:varax
+#+attr_latex: :width 8cm :float wrap
+[[file:./images_week2/rangealpha_2d_x_i.png]]
+
+#+caption: Varying $\alpha$, plotting (y)
+#+LABEL: fig:varay
+#+attr_latex: :width 8cm :float wrap
+[[file:./images_week2/rangealpha_2d_y_i.png]]
 
 *** Plotting Code :noexport:
 **** Plotting $f(x)$ against $x$
@@ -380,31 +492,6 @@ ax.legend((r'$i=2$', r'$x_{i}$ = value of x at iteration $i$',))
 
 ** (iii) Varying Step Size $\alpha$ and $x_0$
 
-#+caption: Varying $x_0$, plotting $x$
-#+LABEL: fig:varx0x
-#+attr_latex: :width 8cm
-[[file:./images_week2/rangex0_2d_x_i.png]]
-
-#+caption: Varying $x_0$, plotting y(x)
-#+LABEL: fig:varx0y
-#+attr_latex: :width 8cm
-[[file:./images_week2/rangex0_2d_y_i.png]]
-
-#+caption: Varying $x_0$, plotting y(x), non-convergance
-#+LABEL: fig:varx0ynon
-#+attr_latex: :width 8cm
-[[file:./images_week2/rangex0_2d_y_i_non.png]]
-
-
-#+caption: Varying $\alpha$, plotting x
-#+LABEL: fig:varax
-#+attr_latex: :width 8cm
-[[file:./images_week2/rangealpha_2d_x_i.png]]
-
-#+caption: Varying $\alpha$, plotting (y)
-#+LABEL: fig:varay
-#+attr_latex: :width 8cm
-[[file:./images_week2/rangealpha_2d_y_i.png]]
 
 
 - Varying $x_0$
