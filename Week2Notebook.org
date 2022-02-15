@@ -44,7 +44,6 @@
 #+LaTeX_HEADER: \usepackage{caption}
 #+LaTeX_HEADER: \newcommand\figwidth{0.48}
 
-
 #+begin_src elisp :results none :exports none
 (setq-local org-image-actual-width '(512))
 (setq-local org-confirm-babel-evaluate nil)
@@ -90,14 +89,14 @@ The resulting expression can be passed to the sympy.diff function to differentia
 Differentiating it will now give a sympy object representing $4x^3$.
 
 # #+ATTR_LATEX: :options style=mystyle 
-#+begin_src python :exports both :tangle ./Week2Src.py 
+#+begin_src python :exports code :tangle ./Week2Src.py 
 x = sympy.symbols('x', real=True)
 y = x**4
 dydx = sympy.diff(y,x)
 print(dydx)
 #+end_src
 
-#+RESULTS[fabc0af0f6145db33746d116894eae83f31e4575]:
+#+RESULTS:
 : 4*x**3
 
 Using these expressions, sympy can turn them into functions that takes an argument with the sympy.lambdify function.
@@ -176,7 +175,6 @@ axset(ax, xrange=2, xoffset=0, yrange=20, yoffset=0)
 
 ** (iii) Varying $\delta$ on Finite Difference
 The difference between symbolic derivative and finite difference is plotted. In Fig \ref{fig:fd2}, as $\delta$ increases, we can see the error getting bigger an bigger for values that are away from $x=0$. Error is bigger further away as a nudge in $x$ causes a larger change. A $\delta<0.01$, seems to produce little error even at large $x$.
-
 *** Varying $\delta$ on Finite Difference Plotting Code            :noexport:
 #+begin_src python :exports none :file ./images_week2/varying_delta.png :tangle ./Week2Src.py 
 dydx = lambda x: 4 * x**3
@@ -187,7 +185,7 @@ xs = np.arange(-20, 20, 0.1)
 deltas = [0.001, 0.01, 0.1, 0.5, 1]
 ys_dif = []
 for delta in deltas:
-  dif = []
+    dif = [
   for x in xs:
       fd = finiteDiff(y, x, delta)
       ex = dydx(x)
@@ -283,7 +281,8 @@ $x$ and $y(x)$ vary with each gradient descent iteration.
 - Figure \ref{fig:fx4} plots the function to be optimised; it is convex, but there is a very flat portion at $-0.5 < x < 0.5$. We know that the $argmin_x f(x)=0$ for this function.
 - Figure \ref{fig:xi} plots $x_i$ against $i$; $x_i$ decreases rapidly on the very first iteration, reaching 40% of the way to 0, but then begins to slow down rapdily, this is because the slope of the function is significantly smaller at $x>0.6$ compared to at $x=1$, and the slope keeps on decreasing at a rate of $4x^3$, which is quite rapid for a constant $\alpha$, and the slope is important in the step as $step = \alpha * slope_{x_i}$.
 - Figure \ref{fig:yi} plots $y$ against $i$; the majority of the optimisation happens in 2 iterations, and very little progress is made after $i=2$, it essentially comes to a flat line 3 iterations onward.
-We see that $x_i$ takes longer to become a flat line than $y(x_i)$, this is because of the flat shape of the bottom of $x^4$. Once $x_i$ reaches the bottom, $x_i$ itself can still move a bit, but will not have a equally proportional impact on $y(x_i)$.
+We see that $x_i$ takes longer to become a flat line than $y(x_i)$, this is because of the flat shape of the bottom of $x^4$. Once $x_i$ reaches the bottom, $x_i$ itself can still move a bit, but will not have a equally proportional impact on $y(x_i)$. Even on a log the optimisation is seen to slow down due to the $4x^3$ slope.
+
 
 #+begin_export latex
 \begin{figure}[htb]
@@ -368,6 +367,12 @@ ax.semilogy(iters, F, linewidth=2.0)
 ax.legend((r'$y(x_{i})$ where $x_i=$ value of x at iteration $i$',))
 #+end_src
 
+#+RESULTS:
+:RESULTS:
+: <matplotlib.legend.Legend at 0x7fc03c184a30>
+[[file:./images_week2/logy_i.png]]
+:END:
+
 **** Plotting $x_i$ against $i$
 #+begin_src python :exports none :file ./images_week2/x_i.png :tangle ./Week2Src.py
 (X, _) = gradDesc3(lambda x : x**4, lambda x : 4*x**3, x0=1, alpha=0.1)
@@ -391,7 +396,6 @@ ax.legend((r'$i=2$', r'$x_{i}$ = value of x at iteration $i$',))
 :END:
 
 ** (iii) Varying Step Size $\alpha$ and $x_0$
-
 - Varying $x_0$
   - Plotting x - Fig. \ref{fig:varx0x} : We can see that $x_0>2.236068$ would lead to an explosive non-convergance; it keeps jumping over to the other side of the curve, higher than what it was before. This is because the combination of the slope at $x>2.236068$ is too high in magnitude for the combination with $alpha=0.1$ and therefore results in too large of a step size. $x_0=2$ jumps over to the other side, but not higher than it was before and still manages to converge. Once the $x_i$ reaches within $-0.5<x<0.5$, the size of the slope is tiny relative to the $\alpha$, and essentially stops making progress.
   - Plotting y that converge - Fig. \ref{fig:varx0y} : We see that even though $x_i$ dont converge on the same point for different $x_0$, they all converge on paractically the same $y$ value, and all of them within only 2 iterations.
@@ -641,23 +645,45 @@ ax.legend(legend_labels)
 
 * (c) Optimising $y(x) = \gamma x^2$ and $y(x) = \gamma |x|$
 ** (i) Optimising $y(x) = \gamma x^2$
-- Change to using function $y(x) = \gamma x^2$
-  - How does changing gamma affect convergence
 
 $\frac{dy}{dx}(x)=2\gamma x$
 
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:gy}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gammay.png}}
+\captionbox{\label{fig:gdy}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gammady.png}}\\[2ex]
+\end{figure}
+#+end_export
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:glogy}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gammalogy.png}}
+\captionbox{\label{fig:glogx}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gammaxi.png}}\\[2ex]
+\end{figure}
+#+end_export
+
+
 *** Code :noexport:
+**** Jax Gamma
 #+begin_src python :exports none :results none :tangle ./Week2Src.py
 from jax import grad
+y = lambda x, gamma: gamma * x**2
 
+# grad by default will take the derivative of the first parameter of the function that we pass
+dydx = grad(y)
+#+end_src
+**** Plotting Util
+#+begin_src python :exports none :results none :tangle ./Week2Src.py
 def visualise_fn(fn, l=-10, r=10, n=1000):
     xs = np.linspace(l, r, num=n)
     y = np.array([fn(x) for x in xs])
     plt.plot(xs,y); plt.show()
 
-def labels_fn(ax, legend, xaxis=r'$x$', yaxis=r'$y(x)$'):
+def labels_fn(ax, legend, xaxis=r'$x$', yaxis=r'$y(x)$', title="Title"):
     ax.set_xlabel(xaxis)
     ax.set_ylabel(yaxis)
+    ax.set_title(title)
     ax.legend(legend)
     
 def visualise_fns(fns, labels_fn=labels_fn, l=-10, r=10, n=1000):
@@ -671,42 +697,105 @@ def visualise_fns(fns, labels_fn=labels_fn, l=-10, r=10, n=1000):
 
 fns_gamma = (lambda fn, gammas: [(lambda x, gamma=gamma: fn(x, gamma)) for gamma in gammas])
 #+end_src
-
-#+begin_src python :exports none :results replace :tangle ./Week2Src.py
-# grad by default will take the derivative of the first parameter of the function that we pass
-y = lambda x, gamma: gamma * x**2
-dydx = grad(y)
+#+begin_src python :exports none :results none :tangle ./Week2Src.py
 gammas = [0.1, 0.2, 1, 2]
-# gammas = [1]
-
 legend = [(r'$\gamma=$'+ str(gamma)) for gamma in gammas]
-
-labels_y = lambda ax: labels_fn(ax, legend, yaxis=r'$\gamma x^2$')
-labels_dy = lambda ax: labels_fn(ax, legend, yaxis=r'$2\gamma x$')
-
+labels_y = lambda ax: labels_fn(ax, legend, yaxis=r'$\gamma x^2$', title=r'$\gamma x^2$')
+labels_dy = lambda ax: labels_fn(ax, legend, yaxis=r'$2\gamma x$', title=r'$2 \gamma x$' )
+#+end_src
+**** Plotting
+#+begin_src python :exports none :results replace :tangle ./Week2Src.py :file ./images_week2/gammady.png
 visualise_fns(fns_gamma(dydx, gammas), labels_fn=labels_dy)
-visualise_fns(fns_gamma(y, gammas), labels_fn=labels_y)
-# visualise_fn(lambda x: dydx(x, 1))
 #+end_src
 
-#+begin_src python :exports none :results none :tangle ./Week2Src.py
-alpha = 0.1
-x0 = 1
-num_iters = num_iters
-grad = lambda gamma : gradDesc3(f=lambda x : y(x, gamma),
-                                df=lambda x : dy(x, gamma),
-                                x0=x0,alpha=0.1,num_iters=num_iters)
-(X,F) = grad(0.5)
+#+begin_src python :exports none :results replace :tangle ./Week2Src.py :file ./images_week2/gammay.png
+visualise_fns(fns_gamma(y, gammas), labels_fn=labels_y)
+#+end_src
 
- # then perform visualisations
- # The various tools to use to inspect the functions behaviour altering gamma
+**** Grad Descent
+#+begin_src python :exports none :results none :tangle ./Week2Src.py
+def gamma_grad(gamma, num_iters=40, x0=1, alpha=0.1):
+    return gradDesc3(f=lambda x : y(x, gamma),
+                     df=(lambda x : dydx(x, gamma)),
+                     x0=x0,
+                     alpha=0.1,
+                     num_iters=num_iters)
+#+end_src
+**** Plotting y varying gamma
+#+begin_src python :exports none :results replace :tangle ./Week2Src.py :file ./images_week2/gammalogy.png
+gammas = [0.1, 0.2, 1, 2]
+num_iters=50
+Ys = np.array([])
+# wonder how can generalise this for future ease of use
+for gamma in gammas:
+    (_, Y) = gamma_grad(gamma, num_iters=num_iters, x0=0.5, alpha=0.1)
+    if len(Ys) > 0:
+        Ys = np.append(Ys, [(Y,gamma)],  axis=0)
+    else:
+        Ys = np.array([(Y, gamma)])
+
+fig, ax = plt.subplots()
+legend_labels = []
+for (Y, gamma) in Ys:
+    # ax.plot(range(num_iters+1), Y, linewidth=2.0)
+    ax.semilogy(range(num_iters+1), Y, linewidth=2.0)
+    legend_labels += [(r' $\gamma$ = ' + str(gamma))]
+ax.legend(legend_labels)
+ax.set_ylabel(r'$y$')
+ax.set_xlabel(r'$i$')
+ax.set_title(r'$y$ Value at Beginning of each Iteration' "\n"
+             r'$x_0=0.5, \alpha=0.1 , y(x) = \gamma x^2$',)
+#+end_src
+
+**** Plotting x varying gamma
+#+begin_src python :exports none :results replace :tangle ./Week2Src.py :file ./images_week2/gammaxi.png
+gammas = [0.1, 0.2, 1, 2]
+num_iters=50
+Xs = np.array([])
+# wonder how can generalise this for future ease of use
+for gamma in gammas:
+    (X, _) = gamma_grad(gamma, num_iters=num_iters, x0=0.5, alpha=0.1)
+    if len(Xs) > 0:
+        Xs = np.append(Xs, [(X,gamma)],  axis=0)
+    else:
+        Xs = np.array([(X, gamma)])
+
+fig, ax = plt.subplots()
+legend_labels = []
+for (X, gamma) in Xs:
+    # ax.plot(range(num_iters+1), X, linewidth=2.0)
+    ax.semilogy(range(num_iters+1), X, linewidth=2.0)
+    legend_labels += [(r' $\gamma$ = ' + str(gamma))]
+ax.legend(legend_labels)
+ax.set_ylabel(r'$x$')
+ax.set_xlabel(r'$i$')
+ax.set_title(r'$x$ Value at Beginning of each Iteration' "\n"
+             r'$x_0=0.5, \alpha=0.1 , y(x) = \gamma x^2$',)
 #+end_src
 
 ** (ii) Optimising $y(x) = \gamma |x|$
-- Repeat for function $y(x) = \gamma |x|$
-*** Code :noexport:
+ $y(x) = \gamma |x|$
+  
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:g2y}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gamma2y.png}}
+\captionbox{\label{fig:g2dy}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gamma2dy.png}}\\[2ex]
+\end{figure}
+#+end_export
 
-#+begin_src python :exports none :results replace :tangle ./Week2Src.py
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:g2xi}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gamma2xi.png}}
+\captionbox{\label{fig:g2logyi}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gamma2logy.png}}\\[2ex]
+\end{figure}
+#+end_export
+
+*** Code :noexport:
+**** Functions
+
+#+begin_src python :exports none :results none :tangle ./Week2Src.py 
 y = lambda x, gamma: gamma * abs(x)
 dydx = grad(y)
 
@@ -715,8 +804,77 @@ legend = [(r'$\gamma=$'+ str(gamma)) for gamma in gammas]
 labels_y = lambda ax: labels_fn(ax, legend, yaxis=r'$\gamma |x|$')
 labels_dy = lambda ax: labels_fn(ax, legend, yaxis=r'$\gamma$')
 
+gamma_grad 
+#+end_src
+
+**** Plotting Functions
+#+begin_src python :exports none :results replace :tangle ./Week2Src.py :file ./images_week2/gamma2dy.png
 visualise_fns(fns_gamma(dydx, gammas), labels_fn=labels_dy)
+#+end_src
+
+#+begin_src python :exports none :results replace :tangle ./Week2Src.py :file ./images_week2/gamma2y.png
 visualise_fns(fns_gamma(y, gammas), labels_fn=labels_y)
+#+end_src
+
+**** Gamma Grad
+#+begin_src python :exports none :results none :tangle ./Week2Src.py
+def gamma_grad(gamma, num_iters=40, x0=1, alpha=0.1):
+    return gradDesc3(f=lambda x : y(x, gamma),
+                     df=(lambda x : dydx(x, gamma)),
+                     x0=x0,
+                     alpha=0.1,
+                     num_iters=num_iters)
+#+end_src
+**** Plotting y varying gamma
+#+begin_src python :exports none :results replace :tangle ./Week2Src.py :file ./images_week2/gamma2logy.png
+gammas = [0.1, 0.2, 1, 2]
+num_iters=50
+Ys = np.array([])
+# wonder how can generalise this for future ease of use
+for gamma in gammas:
+    (_, Y) = gamma_grad(gamma, num_iters=num_iters, x0=0.5, alpha=0.1)
+    if len(Ys) > 0:
+        Ys = np.append(Ys, [(Y,gamma)],  axis=0)
+    else:
+        Ys = np.array([(Y, gamma)])
+
+fig, ax = plt.subplots()
+legend_labels = []
+for (Y, gamma) in Ys:
+    ax.plot(range(num_iters+1), Y, linewidth=2.0)
+    # ax.semilogy(range(num_iters+1), Y, linewidth=2.0)
+    legend_labels += [(r' $\gamma$ = ' + str(gamma))]
+ax.legend(legend_labels)
+ax.set_ylabel(r'$y$')
+ax.set_xlabel(r'$i$')
+ax.set_title(r'$y$ Value at Beginning of each Iteration' "\n"
+             r'$x_0=0.5, \alpha=0.1 , y(x) = \gamma x^2$',)
+#+end_src
+
+**** Plotting x varying gamma
+#+begin_src python :exports none :results replace :tangle ./Week2Src.py :file ./images_week2/gamma2xi.png
+gammas = [0.1, 0.2, 1, 2]
+num_iters=50
+Xs = np.array([])
+# wonder how can generalise this for future ease of use
+for gamma in gammas:
+    (X, _) = gamma_grad(gamma, num_iters=num_iters, x0=0.5, alpha=0.1)
+    if len(Xs) > 0:
+        Xs = np.append(Xs, [(X,gamma)],  axis=0)
+    else:
+        Xs = np.array([(X, gamma)])
+
+fig, ax = plt.subplots()
+legend_labels = []
+for (X, gamma) in Xs:
+    ax.plot(range(num_iters+1), X, linewidth=2.0)
+    # ax.semilogy(range(num_iters+1), X, linewidth=2.0)
+    legend_labels += [(r' $\gamma$ = ' + str(gamma))]
+ax.legend(legend_labels)
+ax.set_ylabel(r'$x$')
+ax.set_xlabel(r'$i$')
+ax.set_title(r'$x$ Value at Beginning of each Iteration' "\n"
+             r'$x_0=0.5, \alpha=0.1 , y(x) = \gamma x^2$',)
 #+end_src
 
 * Appendix
