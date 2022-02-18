@@ -1,5 +1,5 @@
-#+AUTHOR:Ernests Kuznecovs - 17332791
-#+Date:7th February 2022
+#+AUTHOR:Ernests Kuznecovs - 17332791 - kuznecoe@tcd.ie
+#+Date:16th February 2022
 #+Title:Optimisation Algorithms - Week 2 Assignment
 
 #+begin_export latex
@@ -81,6 +81,13 @@ import numpy as np
 import sympy
 #+end_src
 
+#+begin_src python :results replace :exports none :tangle ./Week2Src.py
+print("hello")
+#+end_src
+
+#+RESULTS:
+: hello
+
 * (a) Derivatives and Finite Difference for $y(x) = x^4$
 ** (i) Symbolic Derivative
 Using the symbolic maths library sympy, a symbol object $x$ is created, $x \in \mathbb{R}$.
@@ -100,7 +107,7 @@ print(dydx)
 : 4*x**3
 
 Using these expressions, sympy can turn them into functions that takes an argument with the sympy.lambdify function.
-Effectively giving us the expressions $y(x)=x^{4}$ and $\frac{dy}{dx}(x)=4x^3$. 
+Effectively giving us the expressions $y(x)=x^{4}$ and $\frac{dy}{dx}(x)=4x^3$.
 
 #+begin_src python :exports code :results none :tangle ./Week2Src.py
 y = sympy.lambdify(x, y)
@@ -185,7 +192,7 @@ xs = np.arange(-20, 20, 0.1)
 deltas = [0.001, 0.01, 0.1, 0.5, 1]
 ys_dif = []
 for delta in deltas:
-    dif = [
+  dif = []
   for x in xs:
       fd = finiteDiff(y, x, delta)
       ex = dydx(x)
@@ -275,13 +282,18 @@ x = gradient_descent(fn.df, 1)
 #+RESULTS:
 
 ** (ii) Visualising Gradient Descent
+#+caption: $y(x_i)$ on log scale
+#+LABEL: fig:yilog 
+#+attr_latex: :float wrap :width 0.38\textwidth :placement {r}{0.38\textwidth}
+[[file:images_week2/logy_i.png]]
+
 Gradient Descent is run with, $x_0=1$, $\alpha=0.1$, $y(x) = x^4$.
 $x$ and $y(x)$ vary with each gradient descent iteration.
 
 - Figure \ref{fig:fx4} plots the function to be optimised; it is convex, but there is a very flat portion at $-0.5 < x < 0.5$. We know that the $argmin_x f(x)=0$ for this function.
-- Figure \ref{fig:xi} plots $x_i$ against $i$; $x_i$ decreases rapidly on the very first iteration, reaching 40% of the way to 0, but then begins to slow down rapdily, this is because the slope of the function is significantly smaller at $x>0.6$ compared to at $x=1$, and the slope keeps on decreasing at a rate of $4x^3$, which is quite rapid for a constant $\alpha$, and the slope is important in the step as $step = \alpha * slope_{x_i}$.
+- Figure \ref{fig:xi} plots $x_i$ against $i$; $x_i$ decreases rapidly on the very first iteration, reaching 40% of the way to 0, but then begins to slow down rapdily, this is because the slope of the function is significantly smaller at $x<0.6$ compared to $x=1$, and the slope keeps on decreasing at a rate of $4x^3$, which is quite rapid for a constant $\alpha$, and the slope is important in the step as $step = \alpha * slope_{x_i}$.
 - Figure \ref{fig:yi} plots $y$ against $i$; the majority of the optimisation happens in 2 iterations, and very little progress is made after $i=2$, it essentially comes to a flat line 3 iterations onward.
-We see that $x_i$ takes longer to become a flat line than $y(x_i)$, this is because of the flat shape of the bottom of $x^4$. Once $x_i$ reaches the bottom, $x_i$ itself can still move a bit, but will not have a equally proportional impact on $y(x_i)$. Even on a log the optimisation is seen to slow down due to the $4x^3$ slope.
+We see that $x_i$ takes longer to become a flat line than $y(x_i)$, this is because of the flat shape of the bottom of $x^4$. Once $x_i$ reaches the bottom, $x_i$ itself can still move a bit, but will not have a equally proportional impact on $y(x_i)$. Even on a log scale (fig \ref{fig:yilog}) the optimisation is seen to slow down due to the $4x^3$ slope.
 
 
 #+begin_export latex
@@ -397,7 +409,7 @@ ax.legend((r'$i=2$', r'$x_{i}$ = value of x at iteration $i$',))
 
 ** (iii) Varying Step Size $\alpha$ and $x_0$
 - Varying $x_0$
-  - Plotting x - Fig. \ref{fig:varx0x} : We can see that $x_0>2.236068$ would lead to an explosive non-convergance; it keeps jumping over to the other side of the curve, higher than what it was before. This is because the combination of the slope at $x>2.236068$ is too high in magnitude for the combination with $alpha=0.1$ and therefore results in too large of a step size. $x_0=2$ jumps over to the other side, but not higher than it was before and still manages to converge. Once the $x_i$ reaches within $-0.5<x<0.5$, the size of the slope is tiny relative to the $\alpha$, and essentially stops making progress.
+  - Plotting x - Fig. \ref{fig:varx0x} : We can see that $x_0>2.236068$ would lead to an explosive non-convergance; it keeps jumping over to the other side of the curve, higher than what it was before. This is because the slope at $x>2.236068$ is too high in magnitude for the combination with $alpha=0.1$ and therefore results in too large of a step size. $x_0=2$ jumps over to the other side, but not higher than it was before and still manages to converge. Once the $x_i$ reaches within $-0.5<x<0.5$, the size of the slope is tiny relative to the $\alpha$, and essentially stops making progress.
   - Plotting y that converge - Fig. \ref{fig:varx0y} : We see that even though $x_i$ dont converge on the same point for different $x_0$, they all converge on paractically the same $y$ value, and all of them within only 2 iterations.
   - Plotting y that doesn't converge - Fig. \ref{fig:varx0ynon} : We can see that $x_0>2.236068$ will not converge, the function value keeps increasing due to the larger and larger jumps to each side of the convex function.
 
@@ -636,33 +648,40 @@ ax.legend(legend_labels)
 
 #+RESULTS:
 :RESULTS:
-: /tmp/ipykernel_198847/2328935889.py:14: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.
+: /tmp/ipykernel_18467/2328935889.py:14: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.
 :   Ys = np.array([(Y, alpha)])
 : <__array_function__ internals>:5: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.
-: <matplotlib.legend.Legend at 0x7fefe9eb7a30>
+: <matplotlib.legend.Legend at 0x7fbf7ebd4e50>
 [[file:./images_week2/rangealpha_2d_y_i.png]]
 :END:
 
 * (c) Optimising $y(x) = \gamma x^2$ and $y(x) = \gamma |x|$
 ** (i) Optimising $y(x) = \gamma x^2$
+We have $y(x) = \gamma x^2$. $y(x)$ and $y'(x)$ are plotted (fig \ref{fig:gy}, \ref{fig:gdy}). It is a strongly convex curve. Larger gammas have a steeper curve, and the derivatives are just straight lines at certain slopes.
 
-$\frac{dy}{dx}(x)=2\gamma x$
+$x$ and $y$ are plotted against iteration (fig \ref{fig:glogx}, \ref{fig:glogy}). We first observe that the optimisations stay at a constant rate on the log scale. We can see that for higher $\gamma 's$, the rate of convergance is higher, and stays constant logarithmically even though y is getting down to $10^{-21}$, this stable rate of optimisation must be due to the derivative of the function being a straight line, and hence the step size is always scaling with the logarithm.
+
+The rate of convergance for the lower $\gamma 's$ is much slower as the slope is much smaller, although the optimisation already started at a small value and so doesn't need to move, we could say that the alpha value is appropriately moderate for such a small slope at that $x_0$ and $\gamma$. Though $\alpha$ may need to bumped up for larger $x_0$ since it looks like slope will still be low even far away, or else it might take too long to converge.
 
 #+begin_export latex
 \begin{figure}[htb]
 \centering
 \captionbox{\label{fig:gy}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gammay.png}}
 \captionbox{\label{fig:gdy}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gammady.png}}\\[2ex]
+\captionbox{\label{fig:glogy}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gammalogy.png}}
+\captionbox{\label{fig:glogx}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gammaxi.png}}\\[2ex]
+\captionbox{\label{fig:g2y}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gamma2y.png}}
+\captionbox{\label{fig:g2dy}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gamma2dy.png}}\\[2ex]
 \end{figure}
+\clearpage
 #+end_export
 #+begin_export latex
 \begin{figure}[htb]
 \centering
-\captionbox{\label{fig:glogy}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gammalogy.png}}
-\captionbox{\label{fig:glogx}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gammaxi.png}}\\[2ex]
+\captionbox{\label{fig:g2xi}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gamma2xi.png}}
+\captionbox{\label{fig:g2logyi}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gamma2logy.png}}\\[2ex]
 \end{figure}
 #+end_export
-
 
 *** Code :noexport:
 **** Jax Gamma
@@ -678,7 +697,7 @@ dydx = grad(y)
 def visualise_fn(fn, l=-10, r=10, n=1000):
     xs = np.linspace(l, r, num=n)
     y = np.array([fn(x) for x in xs])
-    plt.plot(xs,y); plt.show()
+    plt.plot(xs,y)
 
 def labels_fn(ax, legend, xaxis=r'$x$', yaxis=r'$y(x)$', title="Title"):
     ax.set_xlabel(xaxis)
@@ -707,6 +726,9 @@ labels_dy = lambda ax: labels_fn(ax, legend, yaxis=r'$2\gamma x$', title=r'$2 \g
 #+begin_src python :exports none :results replace :tangle ./Week2Src.py :file ./images_week2/gammady.png
 visualise_fns(fns_gamma(dydx, gammas), labels_fn=labels_dy)
 #+end_src
+
+#+RESULTS:
+[[file:./images_week2/gammady.png]]
 
 #+begin_src python :exports none :results replace :tangle ./Week2Src.py :file ./images_week2/gammay.png
 visualise_fns(fns_gamma(y, gammas), labels_fn=labels_y)
@@ -747,6 +769,15 @@ ax.set_title(r'$y$ Value at Beginning of each Iteration' "\n"
              r'$x_0=0.5, \alpha=0.1 , y(x) = \gamma x^2$',)
 #+end_src
 
+#+RESULTS:
+:RESULTS:
+: /tmp/ipykernel_18467/295440291.py:10: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.
+:   Ys = np.array([(Y, gamma)])
+: <__array_function__ internals>:5: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.
+: Text(0.5, 1.0, '$y$ Value at Beginning of each Iteration\n$x_0=0.5, \\alpha=0.1 , y(x) = \\gamma x^2$')
+[[file:./images_week2/gammalogy.png]]
+:END:
+
 **** Plotting x varying gamma
 #+begin_src python :exports none :results replace :tangle ./Week2Src.py :file ./images_week2/gammaxi.png
 gammas = [0.1, 0.2, 1, 2]
@@ -774,23 +805,11 @@ ax.set_title(r'$x$ Value at Beginning of each Iteration' "\n"
 #+end_src
 
 ** (ii) Optimising $y(x) = \gamma |x|$
- $y(x) = \gamma |x|$
-  
-#+begin_export latex
-\begin{figure}[htb]
-\centering
-\captionbox{\label{fig:g2y}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gamma2y.png}}
-\captionbox{\label{fig:g2dy}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gamma2dy.png}}\\[2ex]
-\end{figure}
-#+end_export
+We have $y(x) = \gamma |x|$. $y(x)$ and $y'(x)$ are plotted (fig \ref{fig:g2y}, \ref{fig:g2dy}). The functions have kinks in them at $x=0$. For larger $\gamma 's$ the slope is bigger, $\gamma = +/-slope$.
 
-#+begin_export latex
-\begin{figure}[htb]
-\centering
-\captionbox{\label{fig:g2xi}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gamma2xi.png}}
-\captionbox{\label{fig:g2logyi}}{\includegraphics[width=\figwidth\textwidth]{images_week2/gamma2logy.png}}\\[2ex]
-\end{figure}
-#+end_export
+$x$ and $y$ are plotted against iteration (fig \ref{fig:g2xi}, \ref{fig:g2logyi}). We can see the higher $\gamma 's$ move towards $x=0$ faster due to the larger slope. We can observe chattering/zigzaging in a loop for the all of the $\gamma 's$ (except for $\gamma = 0.1$ since it hasn't reached the chattering stage at iteration 50 yet). This exactly repeated loop happens because once the $x_i$ jumps to the other side of the kink, on the next iteration it will try jump back towards the minumum. It would need to get exactly on $x=0$, though most likely it will fall on the slope - it is at this point it enters the loop; the slope is constant, and so is alpha, so it will jump back and forth by the same amount (depending on slope and alpha) across the kink.
+
+We can see the gap thats jumped by the larger $\gamma 's$ is larger, this is because the loop can be entered from a larger value of $x_i$ since the slope is larger therefore jumps are bigger.  Conversely, smaller step sizes end up chattering closer to the optimum value because it inched closer to the kink before jumping over and entering the loop. We can see $\gamma=2$ y value doesn't oscilate because its actually jumping between x values of the same magnitude and hence same function value.
 
 *** Code :noexport:
 **** Functions
@@ -801,8 +820,8 @@ dydx = grad(y)
 
 gammas = [0.1, 0.2, 1, 2]
 legend = [(r'$\gamma=$'+ str(gamma)) for gamma in gammas]
-labels_y = lambda ax: labels_fn(ax, legend, yaxis=r'$\gamma |x|$')
-labels_dy = lambda ax: labels_fn(ax, legend, yaxis=r'$\gamma$')
+labels_y = lambda ax: labels_fn(ax, legend, yaxis=r'$y(x)$', title=r'$y(x) = \gamma |x|$')
+labels_dy = lambda ax: labels_fn(ax, legend, yaxis=r'$ \frac{dy}{dx}(x) $', title=r'$y(x) = \gamma |x|$')
 
 gamma_grad 
 #+end_src
@@ -812,9 +831,15 @@ gamma_grad
 visualise_fns(fns_gamma(dydx, gammas), labels_fn=labels_dy)
 #+end_src
 
+#+RESULTS:
+[[file:./images_week2/gamma2dy.png]]
+
 #+begin_src python :exports none :results replace :tangle ./Week2Src.py :file ./images_week2/gamma2y.png
 visualise_fns(fns_gamma(y, gammas), labels_fn=labels_y)
 #+end_src
+
+#+RESULTS:
+[[file:./images_week2/gamma2y.png]]
 
 **** Gamma Grad
 #+begin_src python :exports none :results none :tangle ./Week2Src.py
@@ -848,8 +873,17 @@ ax.legend(legend_labels)
 ax.set_ylabel(r'$y$')
 ax.set_xlabel(r'$i$')
 ax.set_title(r'$y$ Value at Beginning of each Iteration' "\n"
-             r'$x_0=0.5, \alpha=0.1 , y(x) = \gamma x^2$',)
+             r'$x_0=0.5, \alpha=0.1 , y(x) = \gamma |x|$',)
 #+end_src
+
+#+RESULTS:
+:RESULTS:
+: /tmp/ipykernel_18467/203703717.py:10: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.
+:   Ys = np.array([(Y, gamma)])
+: <__array_function__ internals>:5: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.
+: Text(0.5, 1.0, '$y$ Value at Beginning of each Iteration\n$x_0=0.5, \\alpha=0.1 , y(x) = \\gamma |x|$')
+[[file:./images_week2/gamma2logy.png]]
+:END:
 
 **** Plotting x varying gamma
 #+begin_src python :exports none :results replace :tangle ./Week2Src.py :file ./images_week2/gamma2xi.png
@@ -874,8 +908,17 @@ ax.legend(legend_labels)
 ax.set_ylabel(r'$x$')
 ax.set_xlabel(r'$i$')
 ax.set_title(r'$x$ Value at Beginning of each Iteration' "\n"
-             r'$x_0=0.5, \alpha=0.1 , y(x) = \gamma x^2$',)
+             r'$x_0=0.5, \alpha=0.1 , y(x) = \gamma |x|$',)
 #+end_src
+
+#+RESULTS:
+:RESULTS:
+: /tmp/ipykernel_18467/254995226.py:10: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.
+:   Xs = np.array([(X, gamma)])
+: <__array_function__ internals>:5: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray.
+: Text(0.5, 1.0, '$x$ Value at Beginning of each Iteration\n$x_0=0.5, \\alpha=0.1 , y(x) = \\gamma |x|$')
+[[file:./images_week2/gamma2xi.png]]
+:END:
 
 * Appendix
 ** Code Listing

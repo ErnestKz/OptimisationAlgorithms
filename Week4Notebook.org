@@ -1,0 +1,355 @@
+#+AUTHOR:Ernests Kuznecovs - 17332791 - kuznecoe@tcd.ie
+#+Date:16th February 2022
+#+Title:Optimisation Algorithms - Week 4 Assignment
+
+#+begin_export latex
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+#+end_export
+
+* Preamble :noexport:
+#+PROPERTY: header-args:python :session a2
+#+PROPERTY: header-args:python+ :async yes
+#+PROPERTY: header-args:python+ :eval never-export
+#+PROPERTY: header-args:elisp :eval never-export
+#+EXCLUDE_TAGS: noexport
+
+#+LaTeX_HEADER: \usepackage{listings}
+#+LaTeX_HEADER: \usepackage{xcolor}
+#+LaTeX_HEADER: \usepackage{minted}
+#+LaTeX_HEADER: \usepackage[a4paper, total={6.7in, 10.5in}]{geometry}
+
+#+LaTeX_HEADER: \usepackage{caption}
+#+LaTeX_HEADER: \newcommand\figwidth{0.48}
+
+#+begin_src elisp :results none :exports none
+(setq-local org-image-actual-width '(512))
+(setq-local org-confirm-babel-evaluate nil)
+(setq-local org-src-preserve-indentation 't)
+;; (setq-local org-export-use-babel nil)
+
+;; (setq org-latex-listings 'minted)
+(setq org-latex-listings t)
+(setq org-latex-prefer-user-labels t)
+;; (setq org-latex-minted-options
+;;     '(
+;;       ;; ("bgcolor" "bg")
+;;       ("frame" "lines")))
+
+;; (setq org-latex-listings-options
+;;     '(("basicstyle" "\\small")
+;;       ("keywordstyle" "\\color{black}\\bfseries\\underbar")))
+
+;; (setq org-latex-listings-options nil)
+
+;; (setq org-latex-pdf-process
+;;       (mapcar
+;;        (lambda (s)
+;;          (replace-regexp-in-string "%latex " "%latex -shell-escape " s))
+;;        org-latex-pdf-process))
+#+end_src
+
+#+begin_src python :results none :exports none :tangle ./Week4Src.py
+import matplotlib as mpl
+mpl.rcParams['figure.dpi'] = 200
+mpl.rcParams['figure.facecolor'] = '1'
+import matplotlib.pyplot as plt
+
+import numpy as np
+import sympy
+#+end_src
+
+* Obtaining Functions
+
+#+begin_src python :results none :exports none :tangle ./Week4Src.py
+from sympy import diff, lambdify, symbols
+init_printing(use_unicode=False)
+#+end_src
+
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+x, y = symbols('x y', real=True)
+
+f1 = 3 * (x-9)**4 + 5 * (y-9)**2
+df1dx = diff(f1, x)
+df1dy = diff(f1, y)
+
+f2 = Max(x-9 ,0) + 5 * Abs(y-9)
+df2dx = diff(f2, x)
+df2dy = diff(f2, y)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+df2dxl = lambdify([x, y], df2dx, modules="numpy")
+df2dyl = lambdify([x, y], df2dy, modules="numpy")
+print(df2dxl(8, 1))
+print(df2dyl(8, 8))
+#+end_src
+
+#+RESULTS:
+: 0.0
+: -5
+
+
+- $f_1(x, y) = 3 \left(x - 9\right)^{4} + 5 \left(y - 9\right)^{2}$
+  - $\frac{df_{1}}{dx}(x,y) = 12 \left(x - 9\right)^{3}$
+  - $\frac{df_{1}}{dy}(x,y) = 10 y - 90$
+
+- $f_2(x, y) = 5 \left|{y - 9}\right| + \max\left(0, x - 9\right)$
+  - $\frac{df_{2}}{dx}(x,y) = \theta\left(x - 9\right)$ - this is a Heaviside function
+  - $\frac{df_{2}}{dy}(x,y) = 5 \operatorname{sign}{\left(y - 9 \right)}$
+    
+* (a) Implementing Optimisation Aglorithms
+** Polyak Step Size
+- $\alpha = \frac{f(x) - f^*}{\Delta f(x)^T \Delta f(x) + \epsilon}$
+- $x$ is a vector
+- $[\frac{\partial f}{\partial x_1}(x), \frac{\partial f}{\partial x_2} (x), \ldots, \frac{\partial f}{\partial x_n}(x)] = \Delta f(x)$
+- $\Delta f(x)^{T} \Delta f(x) = \sum\limits_{i=1}^{n} \frac{\partial f}{\partial x_i} (x)^2$
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+def polyak_alpha(f, x, f_star, dfs, eps=0.0001):
+    fdif = f(x) - f_star
+    df_squared_sum = 0
+    for df in dfs:
+        df_squared_sum += df(x)**2
+    return fdif / (df_squared_sum + eps)
+#+end_src
+** Adagrad step
+
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+def adagrad_partial_alpha(df_partial,              
+                         xs,              # x[0] = x0, x[1] = x1, .... x0, x1 ... are vectors
+                         alpha0,
+                         eps
+                         ):
+    df_partial_hist_squared_sum = 0              # hist of steps of the partial in question
+    for x in xs:
+        df_partial_hist_squared_sum += df_partial(x)**2
+    return (alpha0 / (sqrt(df_partial_hist_squared_sum) + eps))
+#+end_src
+
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+def gradient_descent_subgradient_step(dfs,
+                                      x0,   # this is a vector, the input to f/df
+                                      i_max=50):
+    x_history = [x0]                             # keep track of history of xi's
+    for _ in range(i_max):
+        subgradient_step_vector = []             # each partial gets its own step
+        
+        for df in dfs:
+            subgradient_step = adagrad_partial_alpha(df, x_history, alpha0=0.1, eps=0.001) * df(x[-1])
+            subgradient_step_vector += [ subgradient_step ]
+        x = x - subgradient_step_vector; x_history += [x]
+    return x
+#+end_src
+
+
+$\alpha_x = \frac{a_0}{\sqrt{ \frac{df}{dx} (\vec{x}_0)^2 + \frac{df}{dx}(\vec{x}_1)^2 + \hdots + \frac{df}{dx}(\vec{x}_{t-1})^{2}} + \epsilon} = \frac{\alpha_0}{\sqrt{\sum\limits_{i=1}^{t-1} \frac{df}{dx}(x_i)^2}+\epsilon}$
+$t=1$
+$\alpha_1 = \frac{a_0}{\sqrt{ \frac{df}{dx_1} (\vec{x}_0)^2} + \epsilon}$
+$\alpha_2 = \frac{a_0}{\sqrt{ \frac{df}{dx_2} (\vec{x}_0)^2} + \epsilon}$
+
+$t=2$
+$\alpha_1 = \frac{a_0}{\sqrt{ \frac{df}{dx_1} (\vec{x}_0)^2 + \frac{df}{dx_2}(\vec{x}_1)^2}+ \epsilon}$
+$\alpha_2 = \frac{a_0}{\sqrt{ \frac{df}{d\vec{x}_2} (\vec{x}_0)^2 + \frac{df}{dx_2}(\vec{x}_1)^2}  + \epsilon} }$
+
+so we can just hold $\frac{df}{dx_1} (\vec{x}_0)^2 + \frac{df}{dx_2}(\vec{x}_1)^2$ bit in a variable
+and then sum $\frac{df}{dx_3}(\vec{x}_3)^2$ onto the variable when it comes
+and we can discard $\vec{x}_0, \vec{x}_1$, as its not used anywhere else
+
+so for multiple partials, can hold the sums in a vector
+upon each iteration calculate the new partial squared for each partial(this will give us a vector) and then sum each to the according sum in the vector
+
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+def adagrad(dfs,
+            x0,   # this is a vector, the input to f/df
+            i_max=50):
+    
+    x_history = [x0]                             # keep track of history of xi's
+    for _ in range(i_max):
+        subgradient_step_vector = []             # each partial gets its own step
+
+        
+        for df in dfs:
+            subgradient_step = adagrad_partial_alpha(df, x_history, alpha0=0.1, eps=0.001) * df(x[-1])
+            subgradient_step_vector += [ subgradient_step ]
+        x = x - subgradient_step_vector; x_history += [x]
+    return x
+#+end_src
+
+** RMSProp
+
+$a_t = \frac{ a_0 }{ \sqrt{(1 - \beta) \beta^t \frac{df}{dx}(x_0)^2 + (1 - \beta) \beta^{t-1} \frac{df}{dx}(x_1)^2 + \hdots + (1 - \beta) \frac{df}{dx} (x_{t-1})^2} + \epsilon}$
+$0 < \beta \leq 1$
+
+#+begin_src python :results none :exports none :tangle ./Week4Src.py
+# unimplemented
+def rmsprop_partial_alpha(df_partial,
+                        xs,              # history of x values
+                        alpha0,
+                        eps,
+                        beta):
+    df_partial_hist_sum = 0              # sum of hist of weighted steps of the partial in question
+    for x in xs:                         # traverse list starting from 
+        df_partial_hist_squared_sum += df_partial(x)**2
+    return (alpha0 / (sqrt(df_partial_hist_squared_sum) + eps))    
+    
+#+end_src
+
+- We only need to keep track of the sum, as the we dont use x0 anymore.
+- We can simply multiply the sum with Beta to scale it and it will have the same effect.
+
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+def rmsprop_lecture(df, x0, a0, beta, eps, iters_max):   # for a single partial
+    sum = 0 ; x_now = x0; alpha_now = a0
+    for _ in range(iters_max):
+        sum = beta * sum + (1 - beta) * df(x_now)**2
+        x_now = x_now - (alpha_now * df(x_now))
+        alpha_now = a0 / (sqrt(sum) + eps)
+    return x_now
+#+end_src
+
+** Heavy Ball / Polyak Momentum
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+def heavy_ball_lecture(df, x0, a, beta, iters_max):   # for a single partial
+    x_now = x0; z_now = 0
+    for _ in range(iters_max):
+        z_now = beta * z_now + a * df(x_now)
+        x_now = x_now - z_now
+    return x_now
+#+end_src
+** Adam
+Posible to get rid of the betas with polyak?
+
+Adam $\approx$ RMSprop + heavy ball
+$m_{t+1} = \beta_1 m_t + (1 - \beta_1) \Delta f(x_t)$ heavy ball bit
+- note, there is no minimising weight on the most recent term, the term is applied only on the last ones
+  
+$v_{t+1} = \beta_2 v_t + (1 - \beta_2)[ \frac{\partial f}{\partial x_1} (x_t)^2, \frac{\partial f}{\partial x_2} (x_t)^{2}, \hdots , \frac{\partial f}{\partial x_n}(x_t)^2 ]$ this is rms bit, it is being summmed through each step
+$\hat{m}= \frac{m_{t+1}}{(1 - \beta^t_1)}, \hat{v}= \frac{v_{t+1}}{(1 - \beta^t_2)}$
+$x_{t+1} = x_{t} - \alpha [\frac{\hat{m}}{\sqrt{\hat{v_1}} + \epsilon}, \frac{\hat{m}}{\sqrt{\hat{v_2}} + \epsilon},\hdots,\frac{\hat{m}}{\sqrt{\hat{v_n}} + \epsilon}]$
+$m$ is running average of gradient $\Delta f(x_t)$
+$v$ is running average of square gradients
+
+$\hat{v}_{i}$ is indexing/picking out elements from the vector of updates.
+
+
+Similary to heavy ball, large step size that spans a lot of the function does well.
+- It's like feeding a lot of information to the algorithm and the algorithm can take advantage of that.
+
+$[ (1 - \beta_1)\frac{\partial f}{\partial x_1} (x_t), (1 - \beta_1)\frac{\partial f}{\partial x_2} (x_t), \hdots , (1 - \beta_1)\frac{\partial f}{\partial x_n}(x_t) ]$
+
+$(1-\beta_{1})\Delta f(x_t) = [ (1 - \beta_1)\frac{\partial f}{\partial x_1} (x_t) + (1 - \beta_1)\frac{\partial f}{\partial x_2} (x_t) + \hdots  + (1 - \beta_1)\frac{\partial f}{\partial x_n}(x_t) ]$ ? 
+
+
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+def adam(x0, dfs, eps, beta1, beta2, alpha, iters_max=50):
+    x = x0; m = 0; v = np.array([0.0, 0.0])
+    
+    for k in range(iters_max):
+        i = k + 1
+        print(i)
+        # print(type(x[0]))
+        m = beta1 * m + np.sum((1 - beta1) * np.array([float(df(*x)) for df in dfs]))
+        # print(m)
+        v = beta2 * v + (1 - beta2) * np.array([float((df(*x)**2)) for df in dfs])
+        mhat = (m / (1 - beta1**i))   # what are these doing?
+        print(type(mhat))
+        vhat = (v / (1 - beta2**i))
+        print(type(sqrt(vhat[1])))
+        
+        x = x - alpha * np.array([(mhat / (sqrt(vhati) + eps)) for vhati in vhat])
+        print(type(x[0]))
+    return x
+#+end_src
+
+* (b) Optimising Functions
+
+#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+adam(np.array([20.0, 20.0]), np.array([df2dxl, df2dyl]), 0.001, 0.9, 0.9, 0.1)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: 1
+: <class 'numpy.float64'>
+: <class 'sympy.core.numbers.Float'>
+: <class 'sympy.core.numbers.Float'>
+: 2
+# [goto error]
+#+begin_example
+---------------------------------------------------------------------------
+TypeError                                 Traceback (most recent call last)
+/tmp/ipykernel_82710/581729594.py in <module>
+----> 1 adam(np.array([20.0, 20.0]), np.array([df2dxl, df2dyl]), 0.001, 0.9, 0.9, 0.1)
+
+/tmp/ipykernel_82710/1983676483.py in adam(x0, dfs, eps, beta1, beta2, alpha, iters_max)
+      6         print(i)
+      7         # print(type(x[0]))
+----> 8         m = beta1 * m + np.sum((1 - beta1) * np.array([float(df(*x)) for df in dfs]))
+      9         # print(m)
+     10         v = beta2 * v + (1 - beta2) * np.array([float((df(*x)**2)) for df in dfs])
+
+/tmp/ipykernel_82710/1983676483.py in <listcomp>(.0)
+      6         print(i)
+      7         # print(type(x[0]))
+----> 8         m = beta1 * m + np.sum((1 - beta1) * np.array([float(df(*x)) for df in dfs]))
+      9         # print(m)
+     10         v = beta2 * v + (1 - beta2) * np.array([float((df(*x)**2)) for df in dfs])
+
+<lambdifygenerated-25> in _lambdifygenerated(x, y)
+      1 def _lambdifygenerated(x, y):
+----> 2     return Heaviside(x - 9, 1/2)
+
+TypeError: ufunc 'heaviside' not supported for the input types, and the inputs could not be safely coerced to any supported types according to the casting rule ''safe''
+#+end_example
+:END:
+
+#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+# a = np.array([19.4005994005994, 19.8800239952010])
+# df2dxl(*a)
+
+# a = [19.4005994005994, 19.8800239952010]
+# df2dxl(*a)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+#+begin_example
+/nix/store/1rrfv3prz6503hn5d276gs0hzskwrpm4-python3-3.9.6-env/lib/python3.9/site-packages/IPython/lib/latextools.py:126: MatplotlibDeprecationWarning: 
+The to_png function was deprecated in Matplotlib 3.4 and will be removed two minor releases later. Use mathtext.math_to_image instead.
+  mt.to_png(f, s, fontsize=12, dpi=dpi, color=color)
+/nix/store/1rrfv3prz6503hn5d276gs0hzskwrpm4-python3-3.9.6-env/lib/python3.9/site-packages/IPython/lib/latextools.py:126: MatplotlibDeprecationWarning: 
+The to_rgba function was deprecated in Matplotlib 3.4 and will be removed two minor releases later. Use mathtext.math_to_image instead.
+  mt.to_png(f, s, fontsize=12, dpi=dpi, color=color)
+/nix/store/1rrfv3prz6503hn5d276gs0hzskwrpm4-python3-3.9.6-env/lib/python3.9/site-packages/IPython/lib/latextools.py:126: MatplotlibDeprecationWarning: 
+The to_mask function was deprecated in Matplotlib 3.4 and will be removed two minor releases later. Use mathtext.math_to_image instead.
+  mt.to_png(f, s, fontsize=12, dpi=dpi, color=color)
+/nix/store/1rrfv3prz6503hn5d276gs0hzskwrpm4-python3-3.9.6-env/lib/python3.9/site-packages/IPython/lib/latextools.py:126: MatplotlibDeprecationWarning: 
+The MathtextBackendBitmap class was deprecated in Matplotlib 3.4 and will be removed two minor releases later. Use mathtext.math_to_image instead.
+  mt.to_png(f, s, fontsize=12, dpi=dpi, color=color)
+#+end_example
+#+attr_org: :width 37
+[[file:./.ob-jupyter/19ec461e840e9181e83a2b52fd91d9228d8d890b.png]]
+:END:
+* (c) Optimising Relu
