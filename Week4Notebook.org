@@ -84,7 +84,7 @@ import sympy
 * Obtaining Functions
 
 #+begin_src python :results none :exports none :tangle ./Week4Src.py
-from sympy import diff, lambdify, symbols
+from sympy import diff, lambdify, symbols, init_printing, Max, Abs
 init_printing(use_unicode=False)
 #+end_src
 
@@ -103,8 +103,13 @@ df2dy = diff(f2, y)
 #+begin_src python :results replace :exports none :tangle ./Week4Src.py
 df2dxl = lambdify([x, y], df2dx, modules="numpy")
 df2dyl = lambdify([x, y], df2dy, modules="numpy")
+f2l = lambdify([x, y], f2, modules="numpy")
 print(df2dxl(8, 1))
 print(df2dyl(8, 8))
+
+df1dxl = lambdify([x, y], df1dx, modules="numpy")
+df1dyl = lambdify([x, y], df1dy, modules="numpy")
+f1l = lambdify([x, y], f1, modules="numpy")
 #+end_src
 
 #+RESULTS:
@@ -126,6 +131,7 @@ print(df2dyl(8, 8))
 - $x$ is a vector
 - $[\frac{\partial f}{\partial x_1}(x), \frac{\partial f}{\partial x_2} (x), \ldots, \frac{\partial f}{\partial x_n}(x)] = \Delta f(x)$
 - $\Delta f(x)^{T} \Delta f(x) = \sum\limits_{i=1}^{n} \frac{\partial f}{\partial x_i} (x)^2$
+
 #+begin_src python :results none :exports code :tangle ./Week4Src.py
 def polyak_alpha(f, x, f_star, dfs, eps=0.0001):
     fdif = f(x) - f_star
@@ -134,6 +140,18 @@ def polyak_alpha(f, x, f_star, dfs, eps=0.0001):
         df_squared_sum += df(x)**2
     return fdif / (df_squared_sum + eps)
 #+end_src
+
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+def polyak(x0, dfs, f, f_star, eps=0.0001, iters_max=50):
+    x = x0
+    for _ in range(iters_max):
+        fdif = f(*x) - f_star
+        df_squared_sum = np.sum(np.array([df(*x)**2 for df in dfs]))
+        alpha = fdif / (df_squared_sum + eps)
+        x = x - alpha * np.array([df(*x) for df in dfs])
+    return x
+#+end_src
+
 ** Adagrad step
 
 #+begin_src python :results none :exports code :tangle ./Week4Src.py
@@ -229,7 +247,22 @@ def rmsprop_lecture(df, x0, a0, beta, eps, iters_max):   # for a single partial
     return x_now
 #+end_src
 
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+# implment gradients vector function
+#+end_src
+
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+def rmsprop(x0, dfs, alpha0, beta, eps, iters_max):
+    sum = np.array([0.0, 0.0]) ; x = x0 ; alpha = alpha0
+    for _ in range(iters_max):
+      x = x - (alpha * np.array([df(*x) for df in dfs]))
+      sum = beta * sum + (1 - beta) * np.array([float(df(*x)**2) for df in dfs]) # would be nice to write out the formula for this
+      alpha = alpha0 / (np.sqrt(sum) + eps)
+    return x
+#+end_src
+
 ** Heavy Ball / Polyak Momentum
+
 #+begin_src python :results none :exports code :tangle ./Week4Src.py
 def heavy_ball_lecture(df, x0, a, beta, iters_max):   # for a single partial
     x_now = x0; z_now = 0
@@ -238,6 +271,16 @@ def heavy_ball_lecture(df, x0, a, beta, iters_max):   # for a single partial
         x_now = x_now - z_now
     return x_now
 #+end_src
+
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+def heavy_ball(x0, dfs, alpha, beta, iters_max=50):
+    x = x0; z = 0;
+    for _ in range(iters_max):
+        z = beta * z + np.sum(alpha * np.array([float(df(*x)) for df in dfs]))
+        x = x - z
+    return x
+#+end_src
+
 ** Adam
 Posible to get rid of the betas with polyak?
 
@@ -268,88 +311,92 @@ def adam(x0, dfs, eps, beta1, beta2, alpha, iters_max=50):
     
     for k in range(iters_max):
         i = k + 1
-        print(i)
+        # print(i)
         # print(type(x[0]))
         m = beta1 * m + np.sum((1 - beta1) * np.array([float(df(*x)) for df in dfs]))
         # print(m)
         v = beta2 * v + (1 - beta2) * np.array([float((df(*x)**2)) for df in dfs])
         mhat = (m / (1 - beta1**i))   # what are these doing?
-        print(type(mhat))
+        # print(type(mhat))
         vhat = (v / (1 - beta2**i))
-        print(type(sqrt(vhat[1])))
+        # print(type(sqrt(vhat[1])))
         
-        x = x - alpha * np.array([(mhat / (sqrt(vhati) + eps)) for vhati in vhat])
-        print(type(x[0]))
+        x = x - alpha * np.array([(mhat / (np.sqrt(vhati) + eps)) for vhati in vhat])
+        # print(type(x[0]))
     return x
 #+end_src
 
 * (b) Optimising Functions
 
 #+begin_src python :results replace :exports code :tangle ./Week4Src.py
-adam(np.array([20.0, 20.0]), np.array([df2dxl, df2dyl]), 0.001, 0.9, 0.9, 0.1)
+# x0 = np.array([20.0, 20.0])
+# ximax = adam(x0, np.array([df2dxl, df2dyl]), 0.001, 0.9, 0.9, 0.5)
+# print(f2l(*x0))
+# print(f2l(*ximax))
+
+# x0 = np.array([20.0, 20.0])
+# ximax = heavy_ball(x0, np.array([df2dxl, df2dyl]), alpha=0.3, beta=0.90)
+# print(f2l(*x0))
+# print(f2l(*ximax))
+
+# x0 = np.array([20.0, 20.0])
+# ximax = rmsprop(x0, np.array([df2dxl, df2dyl]), alpha0=0.3, beta=0.9, eps=0.001, iters_max=50)
+# print(f2l(*x0))
+# print(f2l(*ximax))
+
+# x0 = np.array([20.0, 20.0])
+# ximax = polyak(x0, np.array([df2dxl, df2dyl]), f=f2l, f_star=0)
+# print(f2l(*x0))
+# print(f2l(*ximax))
+
+print("-----")
+x0 = np.array([20.0, 20.0])
+ximax = adam(x0, np.array([df1dxl, df1dyl]), 0.001, 0.9, 0.9, 0.5)
+print(f1l(*x0))
+print(f1l(*ximax))
+
+x0 = np.array([2.0, 2.0])
+ximax = heavy_ball(x0, np.array([df1dxl, df1dyl]), alpha=0.0001, beta=0.99, iters_max=50)
+print(f1l(*x0))
+print(f1l(*ximax))
+
+x0 = np.array([20.0, 20.0])
+ximax = rmsprop(x0, np.array([df1dxl, df1dyl]), alpha0=.001, beta=0.4, eps=0.000001, iters_max=50)
+print(f1l(*x0))
+print(f1l(*ximax))
+
+x0 = np.array([20.0, 20.0])
+ximax = polyak(x0, np.array([df1dxl, df1dyl]), f=f1l, f_star=0)
+print(f1l(*x0))
+print(f1l(*ximax))
+
+
+# would like a suite of functions where ulitmately can feed in an optimisation algorithm and it generates all the graphs
+# perhaps building blocks of functions, then can override the ones if i want something specific changed
+# or i can give a single function to be optimised and creates a suite 
 #+end_src
 
-#+RESULTS:
-:RESULTS:
-: 1
-: <class 'numpy.float64'>
-: <class 'sympy.core.numbers.Float'>
-: <class 'sympy.core.numbers.Float'>
-: 2
-# [goto error]
-#+begin_example
----------------------------------------------------------------------------
-TypeError                                 Traceback (most recent call last)
-/tmp/ipykernel_82710/581729594.py in <module>
-----> 1 adam(np.array([20.0, 20.0]), np.array([df2dxl, df2dyl]), 0.001, 0.9, 0.9, 0.1)
+different values for hyper params
+different algorithms themselves
+different functions
+functions of different dimension
 
-/tmp/ipykernel_82710/1983676483.py in adam(x0, dfs, eps, beta1, beta2, alpha, iters_max)
-      6         print(i)
-      7         # print(type(x[0]))
-----> 8         m = beta1 * m + np.sum((1 - beta1) * np.array([float(df(*x)) for df in dfs]))
-      9         # print(m)
-     10         v = beta2 * v + (1 - beta2) * np.array([float((df(*x)**2)) for df in dfs])
-
-/tmp/ipykernel_82710/1983676483.py in <listcomp>(.0)
-      6         print(i)
-      7         # print(type(x[0]))
-----> 8         m = beta1 * m + np.sum((1 - beta1) * np.array([float(df(*x)) for df in dfs]))
-      9         # print(m)
-     10         v = beta2 * v + (1 - beta2) * np.array([float((df(*x)**2)) for df in dfs])
-
-<lambdifygenerated-25> in _lambdifygenerated(x, y)
-      1 def _lambdifygenerated(x, y):
-----> 2     return Heaviside(x - 9, 1/2)
-
-TypeError: ufunc 'heaviside' not supported for the input types, and the inputs could not be safely coerced to any supported types according to the casting rule ''safe''
-#+end_example
-:END:
+different plots
+- 1 gradient
+  - x vs i
+  - f vs i
+  - tracing where it goes on the function
+    - plot the function itself
+- 2 gradients
+  - contour plot
+    - lines of where it steps are taken
+    - perhaps an animation
+- multiple gradients
+  - toggle through pairs of them
+    - treat as 2 gradients
 
 #+begin_src python :results replace :exports code :tangle ./Week4Src.py
-# a = np.array([19.4005994005994, 19.8800239952010])
-# df2dxl(*a)
-
-# a = [19.4005994005994, 19.8800239952010]
-# df2dxl(*a)
+# countour plot
 #+end_src
 
-#+RESULTS:
-:RESULTS:
-#+begin_example
-/nix/store/1rrfv3prz6503hn5d276gs0hzskwrpm4-python3-3.9.6-env/lib/python3.9/site-packages/IPython/lib/latextools.py:126: MatplotlibDeprecationWarning: 
-The to_png function was deprecated in Matplotlib 3.4 and will be removed two minor releases later. Use mathtext.math_to_image instead.
-  mt.to_png(f, s, fontsize=12, dpi=dpi, color=color)
-/nix/store/1rrfv3prz6503hn5d276gs0hzskwrpm4-python3-3.9.6-env/lib/python3.9/site-packages/IPython/lib/latextools.py:126: MatplotlibDeprecationWarning: 
-The to_rgba function was deprecated in Matplotlib 3.4 and will be removed two minor releases later. Use mathtext.math_to_image instead.
-  mt.to_png(f, s, fontsize=12, dpi=dpi, color=color)
-/nix/store/1rrfv3prz6503hn5d276gs0hzskwrpm4-python3-3.9.6-env/lib/python3.9/site-packages/IPython/lib/latextools.py:126: MatplotlibDeprecationWarning: 
-The to_mask function was deprecated in Matplotlib 3.4 and will be removed two minor releases later. Use mathtext.math_to_image instead.
-  mt.to_png(f, s, fontsize=12, dpi=dpi, color=color)
-/nix/store/1rrfv3prz6503hn5d276gs0hzskwrpm4-python3-3.9.6-env/lib/python3.9/site-packages/IPython/lib/latextools.py:126: MatplotlibDeprecationWarning: 
-The MathtextBackendBitmap class was deprecated in Matplotlib 3.4 and will be removed two minor releases later. Use mathtext.math_to_image instead.
-  mt.to_png(f, s, fontsize=12, dpi=dpi, color=color)
-#+end_example
-#+attr_org: :width 37
-[[file:./.ob-jupyter/19ec461e840e9181e83a2b52fd91d9228d8d890b.png]]
-:END:
 * (c) Optimising Relu
