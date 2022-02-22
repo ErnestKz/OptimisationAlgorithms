@@ -142,14 +142,25 @@ def polyak_alpha(f, x, f_star, dfs, eps=0.0001):
 #+end_src
 
 #+begin_src python :results none :exports code :tangle ./Week4Src.py
-def polyak(x0, dfs, f, f_star, eps=0.0001, iters_max=50):
+def polyak(x0, f, f_star, eps=0.0001, iters=50):
     x = x0
-    for _ in range(iters_max):
+    X = [x]
+    dfs = f.dfs
+    f = f.f
+    Y = [f(*x)]
+
+    # now need to return x, y, dx
+    for _ in range(iters):
         fdif = f(*x) - f_star
         df_squared_sum = np.sum(np.array([df(*x)**2 for df in dfs]))
         alpha = fdif / (df_squared_sum + eps)
         x = x - alpha * np.array([df(*x) for df in dfs])
-    return x
+
+        X += [x]
+        Y += [f(*x)]
+        # can  calculate by taking difference of the previous X
+        
+    return X, Y
 #+end_src
 
 ** Adagrad step
@@ -252,14 +263,39 @@ def rmsprop_lecture(df, x0, a0, beta, eps, iters_max):   # for a single partial
 #+end_src
 
 #+begin_src python :results none :exports code :tangle ./Week4Src.py
-def rmsprop(x0, dfs, alpha0, beta, eps, iters_max):
+def rmsprop(x0, f, alpha0, beta, eps, iters_max):
     sum = np.array([0.0, 0.0]) ; x = x0 ; alpha = alpha0
+
+    dfs = f.dfs
+    f = f.f
+    
+    X = [x]
+    Y = [f(*x)]
     for _ in range(iters_max):
       x = x - (alpha * np.array([df(*x) for df in dfs]))
       sum = beta * sum + (1 - beta) * np.array([float(df(*x)**2) for df in dfs]) # would be nice to write out the formula for this
       alpha = alpha0 / (np.sqrt(sum) + eps)
-    return x
+      X += [x]
+      Y += [f(*x)]
+    return X, Y
 #+end_src
+
+#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+a = np.array([1,2,4])
+b = np.array([1,2,4])
+print (a + (b*2))
+print (b*2)
+print (b*a)
+2/(np.sqrt(b) + 0.1)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: [ 3  6 12]
+: [2 4 8]
+: [ 1  4 16]
+: array([1.81818182, 1.32081765, 0.95238095])
+:END:
 
 ** Heavy Ball / Polyak Momentum
 
@@ -273,12 +309,21 @@ def heavy_ball_lecture(df, x0, a, beta, iters_max):   # for a single partial
 #+end_src
 
 #+begin_src python :results none :exports code :tangle ./Week4Src.py
-def heavy_ball(x0, dfs, alpha, beta, iters_max=50):
-    x = x0; z = 0;
+def heavy_ball(x0, f, alpha, beta, iters_max):
+    dfs = f.dfs
+    f = f.f
+    x = x0; z = np.array([0, 0]);
+
+    X = [x]
+    Y = [f(*x)]
     for _ in range(iters_max):
-        z = beta * z + np.sum(alpha * np.array([float(df(*x)) for df in dfs]))
+        z = beta * z + alpha * np.array([float(df(*x)) for df in dfs])
         x = x - z
-    return x
+
+        X += [x]
+        Y += [f(*x)]
+        
+    return X, Y
 #+end_src
 
 ** Adam
@@ -321,11 +366,351 @@ def adam(x0, dfs, eps, beta1, beta2, alpha, iters_max=50):
         vhat = (v / (1 - beta2**i))
         # print(type(sqrt(vhat[1])))
         
-        x = x - alpha * np.array([(mhat / (np.sqrt(vhati) + eps)) for vhati in vhat])
+l        x = x - alpha * np.array([(mhat / (np.sqrt(vhati) + eps)) for vhati in vhat])
         # print(type(x[0]))
     return x
 #+end_src
 
+*** Code :noexport:
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+def adam(x0, f, iters_max, eps, beta1, beta2, alpha):
+    x = x0; m = 0; v = np.array([0.0, 0.0])
+    for k in range(iters_max):
+        i = k + 1
+        delx = f.delx(*x)
+        m = beta1 * m + np.sum((1 - beta1) * delx)
+        mhat = (m / (1 - beta1**i)) # what are these doing? this needs to be indexed like vhati
+        v = beta2 * v + (1 - beta2) * delx**2
+        vhat = (v / (1 - beta2**i))
+        x = x - alpha * np.array([(mhat / (np.sqrt(vhati) + eps)) for vhati in vhat])
+    return x
+#+end_src
+
+#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+a = np.array([1, 2, 4])
+b = np.array([1, 2, 4])
+print(a.T * b)
+print(np.dot(a, a))
+
+d = lambda f, x: np.array([df(*x) for df in f.dfs])
+# n = np.sum(nabla(f, x)**2)
+print(np.sum(a**2))
+#+end_src
+
+#+RESULTS:
+: [ 1  4 16]
+: 21
+: 21
+
+#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+class Fn:
+    def __init__(self, f, dfs, name):
+        self.f = f
+        self.dfs = dfs
+        self.name = name
+
+class OptAlg:
+    def __init__(self, f, name):
+        self.f = f
+        self.name = name
+
+# f = Fn(f1l, np.array([df1dxl, df1dyl]))
+
+# input = [{
+#     "x0" : np.array([2.0, 2.0]),
+#     "iters" : 50,
+#     "f": f,
+#     "alpha" : 0.1,
+#     "beta1" : 0.9,
+#     "beta2" : 0.9999,
+# }]
+
+def mkInputAdam (x0, iters, f, alpha, beta1, beta2):
+    return {
+        "x0" : x0,
+        "iters" : iters,
+        "f": f,
+        "alpha" : alpha,
+        "beta1" : beta1,
+        "beta2" : beta2,
+    }
+
+# print(mkInputAdam(np.array([2.0, 2.0]), iters=400, f=f, alpha=0.1, beta1=0.1, beta2=0.2))
+# ob =  {
+#     "x0" : np.array([2.0, 2.0]),
+#     "iters" : 50,
+#     "f": f,
+#     "alpha" : [0.1, 0.1],
+#     "beta1" : 0.9,
+#     "beta2" : 0.9999,
+# }
+
+def mkInput(**kwargs):
+    # for each input, we are expecting a certain shape
+    # x0 : is an array, if an array of arrays then we have multiple instances
+    # iters : is a scalar, if array then have multiple instances
+    # f : is the function by default will be single value for now
+    # the rest: scalars, otherwise multiple instances
+    expected_vector = {"x0"}
+    for key, value in kwargs.items():
+        if key in expected_vector:
+            value = np.array(value)
+            if value.ndim == 1:
+                kwargs[key] = [value]
+        else:
+            if type(value) is not list:
+                kwargs[key] = [value]
+
+    keys = kwargs.keys()
+    partial_dicts = [{}]
+    for key in keys:
+        partial_dicts_new = []
+        for partial_dict in partial_dicts:
+            for value in kwargs[key]: # making a new partial dict for each value
+                partial_dict_new = partial_dict.copy()
+                partial_dict_new[key] = value
+                partial_dicts_new += [partial_dict_new]
+                partial_dicts = partial_dicts_new
+                
+    return partial_dicts
+
+
+# inputs = mkInput(x0=[3,3], iters=400, f=f, alpha=[0.1, 0.2, 0.3], beta1=0.1, beta2=0.2)
+
+def runOptimisations(optAlg, inputs):
+    outputs = []
+    for input in inputs:
+        # print(input)
+        X, Y = optAlg.f(**input)
+        input["X"] = X
+        input["Y"] = Y
+        # input["dX"] = dX
+        input["algorithm"] = optAlg.name
+        outputs += [input]
+    return outputs
+
+polyak_alg = OptAlg(f=polyak, name="polyak")
+
+
+f2 = Fn(f=f2l, dfs=[ df2dxl, df2dyl ], name="blah")
+
+# print(f2.f)
+# print(f2.dfs)
+# print(f2.dfs)
+# inputs= mkInput(
+#     x0=[21, 21],
+#     f=f2,
+#     f_star=0,
+#     eps=0.0001,
+#     iters=60,
+# )
+
+# print(inputs)    
+# out = runOptimisations(optAlg=polyak_alg,
+#                        inputs=inputs
+#                        )
+
+
+
+# rms_alg = OptAlg(f=rmsprop, name="rmsprop")
+
+# inputs= mkInput(
+#     x0=[35,-20],
+#     f=f2,
+#     alpha0=0.4,
+#     beta=0.9,
+#     eps=0.0001,
+#     iters_max=70
+# )
+
+# out = runOptimisations(optAlg=rms_alg,
+#                        inputs=inputs
+#                        )
+
+
+# heavy_alg = OptAlg(f=heavy_ball, name="heavy ball")
+
+# inputs= mkInput(
+#     x0=[35,-20],
+#     f=f2,
+#     alpha=0.4,
+#     beta=0.9,
+#     iters_max=70
+# )
+
+# out = runOptimisations(optAlg=heavy_alg,
+#                        inputs=inputs
+#                        )
+
+
+# print(out[0]['X'][-1])
+# print(out[0]['Y'][-1])
+# print(out[1]['X'][-1])
+# print(out[1]['Y'][-1])
+# print(out[1]['Y'][-1])
+print(out[0]['X'])
+print(out[0]['X'][-1])
+print(out[0]['Y'][-1])
+print(out[0]['Y'])
+#+end_src
+
+#+RESULTS:
+: [array([ 35, -20]), array([ 34.6, -18. ]), array([ 33.33548881, -16.73516893]), array([ 32.41803635, -15.8175481 ]), array([ 31.64980517, -15.04919887]), array([ 30.96782798, -14.36712864]), array([ 30.34285697, -13.7420795 ]), array([ 29.75858586, -13.15774011]), array([ 29.20486848, -12.6039614 ]), array([ 28.67490849, -12.07394524]), array([ 28.1639057 , -11.56289021]), array([ 27.66833176, -11.06726716]), array([ 27.18551142, -10.58440018]), array([ 26.71336527, -10.11220945]), array([26.25024413, -9.6490454 ]), array([25.79481794, -9.19357773]), array([25.34599894, -8.74471844]), array([24.90288689, -8.30156712]), array([24.4647292 , -7.86337102]), array([24.03089119, -7.42949537]), array([23.60083359, -6.99940078]), array([23.17409519, -6.57262595]), array([22.75027928, -6.14877412]), array([22.3290429 , -5.72750225]), array([21.91008828, -5.30851251]), array([21.49315584, -4.8915453 ]), array([21.07801854, -4.47637354]), array([20.66447722, -4.06279801]), array([20.25235663, -3.65064345]), array([19.84150226, -3.23975532]), array([19.43177757, -2.82999705]), array([19.02306167, -2.42124773]), array([18.61524732, -2.01340012]), array([18.2082393 , -1.60635897]), array([17.8019529 , -1.20003955]), array([17.39631268, -0.79436642]), array([16.9912514 , -0.38927233]), array([1.65867091e+01, 1.53027573e-02]), array([16.18263204,  0.41941243]), array([15.77897246,  0.8231046 ]), array([15.37568746,  1.22642213]), array([14.9727387 ,  1.62940337]), array([14.57009184,  2.03208266]), array([14.1677161 ,  2.43449078]), array([13.7655839 ,  2.83665532]), array([13.36367052,  3.23860101]), array([12.96195376,  3.64035005]), array([12.56041373,  4.04192233]), array([12.15903254,  4.44333575]), array([11.75779415,  4.84460634]), array([11.35668415,  5.24574852]), array([10.95568959,  5.64677523]), array([10.55479886,  6.04769812]), array([10.15400149,  6.44852762]), array([9.75328809, 6.84927313]), array([9.35265022, 7.2499431 ]), array([8.9520803 , 7.65054512]), array([8.9520803 , 8.05108601]), array([8.9520803 , 8.45157192]), array([8.9520803 , 8.85200834]), array([8.9520803 , 9.25240026]), array([8.9520803 , 8.85204839]), array([8.9520803 , 9.25236423]), array([8.9520803 , 8.85208081]), array([8.9520803 , 9.25233506]), array([8.9520803 , 8.85210706]), array([8.9520803 , 9.25231144]), array([8.9520803 , 8.85212831]), array([8.9520803 , 9.25229232]), array([8.9520803 , 8.85214552]), array([8.9520803 , 9.25227683])]
+: [8.9520803  9.25227683]
+: 1.2613841423314565
+: [171, 160.6, 153.01133346384813, 147.50577684564013, 142.89579951220188, 138.80347118513615, 135.05325446703628, 131.5472864301592, 128.22467548191588, 125.04463466832955, 121.97835676634043, 119.00466755052317, 116.1075123367782, 113.27441252007524, 110.49547115307405, 107.76270659567388, 105.06959112674564, 102.41072247373786, 99.7815843193808, 97.17836802290395, 94.59783747188678, 92.03722496759491, 89.49414985942384, 86.96655413570971, 84.4526508442102, 81.95088235267825, 79.459886250557, 76.97846725179583, 74.50557386006622, 72.04027884977276, 69.58176283164667, 67.12930033241634, 64.68224793927065, 62.24003415220447, 59.80215065839388, 57.36814479789892, 54.937613033152324, 52.510195268735934, 50.08556989500033, 47.66344945073153, 45.24357681751053, 42.82572187255269, 40.40967853834895, 37.99526217689647, 35.58230728411513, 33.17066544652467, 30.760203527658348, 28.350802056214405, 25.94235379175651, 23.534762446995394, 21.12794154842006, 18.72181341937953, 16.316308271713222, 13.911363393743754, 11.506922423925445, 9.1029347007215, 6.747274384509736, 4.744569926949289, 2.7421404236075375, 0.7399582822604867, 1.2620013116524476, 0.7397580530068915, 1.2618211566824833, 0.7395959551153375, 1.2616753022473404, 0.7394647133842103, 1.2615572067630776, 0.7393584453228108, 1.261461579982246, 0.7392723929415546, 1.2613841423314565]
+
+
+- different plots
+- 1 gradient
+  - x vs i
+  - f vs i
+  - tracing where it goes on the function
+    - plot the function itself
+- 2 gradients
+  - contour plot
+    - lines of where it steps are taken
+    - perhaps an animation
+- multiple gradients
+  - toggle through pairs of them
+    - treat as 2 gradients
+
+#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+# using the record to create various plots
+# perhaps plots comparing hyperparameters
+
+plot = {
+    "comparing": "alpha",
+    "y": True,
+    # "x": True
+}
+
+def hyperparams_string(inputs):
+    string = ""
+    for key, value in inputs.items():
+        string += f"{key}={value}, "
+    return string[0:-2]
+
+
+# sepcify dict keys that you want the value to be collected
+# it returns a list of tuples of the arugments
+def dicts_collect(keys, dicts):
+    values = []
+    for dict in dicts:
+        values += [[dict[key] for key in keys]]
+    return values
+
+def ploty(inputs, comparing):
+    inp = inputs[0].copy()
+    f_name = inp['f'].name
+    optname = inp['algorithm']
+    
+    del inp[comparing]
+    del inp['f']
+    del inp['X']
+    del inp['Y']
+    inp['algorithm']
+    hs = hyperparams_string(inp)
+
+    title_string = optname + "; " + f_name + "; Varying " + comparing + " \n" + hs
+    
+    fig, ax = plt.subplots()
+    ax.set_ylabel(r'$y(x_i)$')
+    ax.set_xlabel(r'$i$')
+    ax.set_title(title_string)
+    
+    rangei = 50
+    legend_labels = []
+l    for (X, Y, var) in dicts_collect(("X", "Y", comparing), inputs):
+        ax.plot(range(len(Y)), Y, linewidth=2.0)
+        legend_labels += [(comparing + ": " + str(var))]
+    ax.legend(legend_labels)
+
+
+polyak_alg = OptAlg(f=polyak, name="polyak")
+f2 = Fn(f=f2l, dfs=[ df2dxl, df2dyl ], name="blah")
+
+
+out = runOptimisations(optAlg=polyak_alg,
+                       inputs=mkInput(
+                           x0=[20,20],
+                           f=f2,
+                           f_star=0,
+                           eps=[0.001,0.01,0.1, 100 ],
+                           iters=10,))
+
+print(mkInput(
+    x0=[[20,20], [200,200]],
+    f=f2,
+    f_star=0,
+    eps=[0.001,0.1,]
+    iters=10,)[1])
+ploty(out, 'eps')
+#+end_src
+
+
+#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+print([1, 2, 3, 4][0:-2])
+#+end_src
+
+#+RESULTS:
+: [1, 2]
+
+#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+a = np.array([2.0, 2.0])
+a = np.array([[2.0, 2.0], [2.0, 2.0]])
+print(a.ndim)
+#+end_src
+
+#+RESULTS:
+: 2
+
+#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+import itertools as it
+
+keys = ob.keys()
+val = ob.values()
+a = it.combinations(val, 1)
+print(list(a))
+#+end_src
+
+#+RESULTS:
+: [(array([2., 2.]),), (50,), (<__main__.Fn object at 0x7f3a7c78bfd0>,), ([0.1, 0.1],), (0.9,), (0.9999,)]
+
+#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+def my_product(inp):
+    return (dict(zip(inp.keys(), values)) for values in product(*inp.values())
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+# [goto error]
+:   File "/tmp/ipykernel_426458/539469939.py", line 2
+:     return (dict(zip(inp.keys(), values)) for values in product(*inp.values())
+:                                                                               ^
+: SyntaxError: unexpected EOF while parsing
+:END:
+
+#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+a = [[1,2,3], [1,2,4]]
+a = np.array(a)
+b = np.array([1,2,3])
+b = np.array([1,2,3])
+
+print(a.shape)
+print(b.shape)
+print(a.ndim)
+print(b.ndim)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+# [goto error]
+:   File "/tmp/ipykernel_426458/1364142437.py", line 5
+:     :RESULTS:
+:     ^
+: SyntaxError: invalid syntax
+:END:
 * (b) Optimising Functions
 
 #+begin_src python :results replace :exports code :tangle ./Week4Src.py
@@ -346,6 +731,7 @@ def adam(x0, dfs, eps, beta1, beta2, alpha, iters_max=50):
 
 # x0 = np.array([20.0, 20.0])
 # ximax = polyak(x0, np.array([df2dxl, df2dyl]), f=f2l, f_star=0)
+# print(ximax)
 # print(f2l(*x0))
 # print(f2l(*ximax))
 
@@ -356,7 +742,8 @@ print(f1l(*x0))
 print(f1l(*ximax))
 
 x0 = np.array([2.0, 2.0])
-ximax = heavy_ball(x0, np.array([df1dxl, df1dyl]), alpha=0.0001, beta=0.99, iters_max=50)
+ximax = heavy_ball(x0, np.array([df1dxl, df1dyl]), alpha=0.0001, beta=0.97, iters_max=50)
+print(ximax)
 print(f1l(*x0))
 print(f1l(*ximax))
 
@@ -376,12 +763,30 @@ print(f1l(*ximax))
 # or i can give a single function to be optimised and creates a suite 
 #+end_src
 
-different values for hyper params
-different algorithms themselves
-different functions
-functions of different dimension
+#+RESULTS:
+:RESULTS:
+: -----
+# [goto error]
+: ---------------------------------------------------------------------------
+: TypeError                                 Traceback (most recent call last)
+: /tmp/ipykernel_14743/3907448913.py in <module>
+:      22 print("-----")
+:      23 x0 = np.array([20.0, 20.0])
+: ---> 24 ximax = adam(x0, np.array([df1dxl, df1dyl]), 0.001, 0.9, 0.9, 0.5)
+:      25 print(f1l(*x0))
+:      26 print(f1l(*ximax))
+: 
+: TypeError: adam() missing 1 required positional argument: 'alpha'
+:END:
 
-different plots
+- different optimisation algorithms themselves
+  - different hyper parameters
+    
+- different functions to optimise
+  - differnet modifiers on those functions
+  - functions of different dimensions
+
+- different plots
 - 1 gradient
   - x vs i
   - f vs i
@@ -397,6 +802,60 @@ different plots
 
 #+begin_src python :results replace :exports code :tangle ./Week4Src.py
 # countour plot
+delta = 0.2
+x1s = np.arange(0, 15, delta)
+x2s = np.arange(0, 15, delta)
+X1, X2 = np.meshgrid(x1s, x2s)
+# for each pair of the x1s and x2s, there is a y value
+
+# Z1 = np.exp(-X1**2 - X2**2)
+# Z2 = np.exp(-(X1 - 1)**2 - (X2 - 1)**2)
+# Z = (Z1 - Z2) * 2
+
+print(x1s.shape)
+print(x2s.shape)
+print(X1.shape)
+print(X2.shape)
+print(Z.shape)
+from matplotlib import ticker, cm
+# Z = np.vectorize(f1l)(X1, X2)
+Z = np.vectorize(f1l)(X1, X2)
+fig, ax = plt.subplots()
+CS = ax.contourf(X1, X2, Z,
+                cmap=cm.PuBu_r,
+                locator=ticker.LogLocator()
+                 )
+# manual_locations = [
+#     (-1, -1.4), (-0.62, -0.7), (-2, 0.5), (1.7, 1.2), (2.0, 1.4), (2.4, 1.7)]
+ax.clabel(CS, inline=True, fontsize=10,
+          # manual=manual_locations
+          
+          )
+cbar = fig.colorbar(CS)
+ax.set_title('Simplest default with labels')
 #+end_src
 
+#+RESULTS:
+:RESULTS:
+: (75,)
+: (75,)
+: (75, 75)
+: (75, 75)
+# [goto error]
+: ---------------------------------------------------------------------------
+: NameError                                 Traceback (most recent call last)
+: /tmp/ipykernel_14743/293906373.py in <module>
+:      14 print(X1.shape)
+:      15 print(X2.shape)
+: ---> 16 print(Z.shape)
+:      17 from matplotlib import ticker, cm
+:      18 # Z = np.vectorize(f1l)(X1, X2)
+: 
+: NameError: name 'Z' is not defined
+:END:
+
+#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+f2l(0,-170)
+print(f1l(10,10))
+#+end_src
 * (c) Optimising Relu
