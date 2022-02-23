@@ -132,32 +132,9 @@ $[ (1 - \beta_1)\frac{\partial f}{\partial x_1} (x_t), (1 - \beta_1)\frac{\parti
 $(1-\beta_{1})\Delta f(x_t) = [ (1 - \beta_1)\frac{\partial f}{\partial x_1} (x_t) + (1 - \beta_1)\frac{\partial f}{\partial x_2} (x_t) + \hdots  + (1 - \beta_1)\frac{\partial f}{\partial x_n}(x_t) ]$ ? 
 
 
-*** Code :noexport:
-
-
-- different optimisation algorithms themselves
-  - different hyper parameters
-    
-- different functions to optimise
-  - differnet modifiers on those functions
-  - functions of different dimensions
-
-- different plots
-- 1 gradient
-  - x vs i
-  - f vs i
-  - tracing where it goes on the function
-    - plot the function itself
-- 2 gradients
-  - contour plot
-    - lines of where it steps are taken
-    - perhaps an animation
-- multiple gradients
-  - toggle through pairs of them
-    - treat as 2 gradients
-
 * (b) Optimising Functions
-
+$\frac{\partial f_1}{\partial x_{1}}=12 \left(x_{1} - 9\right)^{3}, \frac{\partial f_1}{\partial x_{2}}=10 x_{2} - 90$
+$f_1(x_{1},x_{2}) = 3 \left(x_{1} - 9\right)^{4} + 5 \left(x_{2} - 9\right)^{2}$
 #+begin_src python :results replace :exports code :tangle ./Week4Src.py
 # countour plot
 delta = 0.2
