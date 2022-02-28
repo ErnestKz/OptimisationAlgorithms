@@ -108,11 +108,14 @@ def dicts_collect(keys, dicts):
 from OptimisationAlgorithmToolkit.Function import OptimisableFunction
 from OptimisationAlgorithmToolkit import Algorithms
 from OptimisationAlgorithmToolkit import DataType
+from OptimisationAlgorithmToolkit import Plotting
 import importlib
 importlib.reload(Algorithms)
 importlib.reload(DataType)
+importlib.reload(Plotting)
 from OptimisationAlgorithmToolkit.Algorithms import Polyak, Adam, HeavyBall, RMSProp, Adagrad, ConstantStep
-from OptimisationAlgorithmToolkit.DataType import meta, create_labels, get_titles
+from OptimisationAlgorithmToolkit.DataType import create_labels, get_titles
+from OptimisationAlgorithmToolkit.Plotting import ploty
 #+end_src
 
 * Obtaining Functions
@@ -245,38 +248,49 @@ x = symbols('x', real=True)
 sym_f_quadratic = x**2
 f_quadratic = OptimisableFunction(sym_f_quadratic, [x], "f_q")
 
-print(RMSProp.all_parameters)
-
-outputs2 = Adagrad.set_parameters(
-    x0=[[1], [2]],
-    f=f_quadratic,
-    iters=50,
-    alpha0=[0.2, 0.5, 0.8],               # this should determine each records label
-    eps=1e-5).run()
-
-RMSProp.set_parameters(
+ada_out = Adagrad.set_parameters(
     x0=[1],
     f=f_quadratic,
-    iters=50,
-    alpha0=0.06,
-    beta=[0.1, 0.2, 0.9],
-    eps=1e-5)
-outputs = RMSProp.run()
-print(outputs[0]['Y'])
-# ax = plot_y_vary_param(outputs, "beta")
-# ax.semilogy()
-a = outputs + outputs2
-create_labels(a)
-t = get_titles(a)
-print(t)
-print(a[4]['label'])
+    iters=4,
+    alpha0=[0.3],               # this should determine each records label
+    eps=1e-5).run()
+rms_out = RMSProp.set_parameters(
+    x0=[1],
+    f=f_quadratic,
+    iters=4,
+    alpha0=0.3,
+    beta=0.1,
+    eps=1e-5).run()
+comb_out = rms_out + ada_out
+
+# ada_out = Adagrad.set_parameters(
+#     x0=[1],
+#     f=f_quadratic,
+#     iters=50,
+#     alpha0=0.2,               # this should determine each records label
+#     eps=1e-5).run()
+# rms_out = RMSProp.set_parameters(
+#     x0=[1],
+#     f=f_quadratic,
+#     iters=50,
+#     alpha0=0.06,
+#     beta=0.1,
+#     eps=1e-5).run()
+# comb_out = rms_out + ada_out
+
+create_labels(comb_out)
+t = get_titles(comb_out )
+# t = get_titles(comb_out, ['x0', 'iters'])
+
+ax = ploty(comb_out)
+ax.set_title(f'{t["Adagrad"]} \n {t["RMSProp"]}')
 #+end_src
 
 #+RESULTS:
-: ('x0', 'f', 'alpha0', 'beta', 'eps', 'iters')
-: [1, 0.7744, 0.6670884451118795, 0.5728810775648908, 0.48635568503715226, 0.4070152686083506, 0.33480471700253883, 0.2697113765903326, 0.21172517738577293, 0.1608340066675227, 0.11702221512889699, 0.08026871560573763, 0.05054356526374296, 0.027800977662262735, 0.011962542840321638, 0.0028652985628994623, 6.210885341954861e-06, 2.4681843104832683e-05, 0.001072758984218594, 0.0009168270280496842, 0.000872149991968518, 0.0009172354785382298, 0.0008901654698807918, 0.0009046112476984058, 0.0008972155781964292, 0.0009009468703284158, 0.0008990759547489987, 0.0009000119778336547, 0.0008995441525329219, 0.0008997778921562405, 0.0008996611282174754, 0.0008997194542682174, 0.0008996903199956145, 0.0008997048726588406, 0.000899697603592074, 0.000899701234492874, 0.0008996994208585365, 0.0008997003267684718, 0.0008996998742667407, 0.0008997001002912125, 0.000899699987392064, 0.0008997000437851514, 0.0008997000156168229, 0.0008997000296868936, 0.0008997000226588979, 0.0008997000261693792, 0.0008997000244158951, 0.0008997000252917597, 0.0008997000248542655, 0.0008997000250727947, 0.0008997000249636385]
-: {'RMSProp': 'RMSProp: x0=[1] iters=50 eps=1e-05 alpha0=0.06', 'Adagrad': 'Adagrad: iters=50 eps=1e-05'}
-: Adagrad 	 x0=[1] alpha0=0.5
+:RESULTS:
+: Text(0.5, 1.0, 'Adagrad: x0=[1] iters=4 eps=1e-05 alpha0=0.3 \n RMSProp: beta=0.1 iters=4 alpha0=0.3 x0=[1] eps=1e-05')
+[[file:./.ob-jupyter/255aed1ec036568a7f06bf8e0f8d9fa3b5fc6175.png]]
+:END:
 
 *** RMS
 #+begin_src python :results replace :exports none :tangle ./Week4Src.py
