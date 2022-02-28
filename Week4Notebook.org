@@ -51,7 +51,6 @@
 
 (setq org-latex-listings t)
 (setq org-latex-prefer-user-labels t)
-
 #+end_src
 
 #+begin_src python :results none :exports none :tangle ./Week4Src.py
@@ -59,21 +58,83 @@ import matplotlib as mpl
 mpl.rcParams['figure.dpi'] = 200
 mpl.rcParams['figure.facecolor'] = '1'
 import matplotlib.pyplot as plt
+#+end_src
 
-import numpy as np
-import sympy
+#+begin_src python :results none :exports none :tangle ./Week4Src.py
+def plot_y_vary_param(inputs, comparing):
+    i = inputs[0]
+    f = i['f']
+    function_name = f.function_name
+    function_latex = f.latex()
+    
+    opt_alg = i['algorithm']
+    algorithm_name = opt_alg.algorithm_name
+
+    hyperparams = (opt_alg.hyperparameters + ['x0'])
+    hyperparams.remove(comparing)
+    
+    hs = hyperparams_string(i, hyperparams)
+    top = (rf'{algorithm_name} on ${function_latex}$ varying {comparing}')
+    title_string = top + " \n" +hs
+
+    fig, ax = plt.subplots()
+    ax.set_title(title_string)
+    ax.set_ylabel(f'${function_name}$')
+    ax.set_xlabel(r'$i$')
+
+    rangei = 50
+    legend_labels = []
+    for (X, Y, var) in dicts_collect(("X", "Y", comparing), inputs):
+        ax.plot(range(len(Y)), Y, linewidth=2.0)
+        legend_labels += [(comparing + ": " + str(var))]
+    ax.legend(legend_labels)
+    return ax
+
+def hyperparams_string(inputs, hyperparams):
+    string = ""
+    for p in hyperparams:
+        string += f"{p}={inputs[p]}, "
+    return string[0:-2]
+
+def dicts_collect(keys, dicts):
+    values = []
+    for dict in dicts:
+        values += [[dict[key] for key in keys]]
+    return values
+#+end_src
+
+#+begin_src python :results none :exports none :tangle ./Week4Src.py
+# import OptimisationAlgorithmToolkit
+from OptimisationAlgorithmToolkit.Function import OptimisableFunction
+from OptimisationAlgorithmToolkit import Algorithms
+from OptimisationAlgorithmToolkit import DataType
+import importlib
+importlib.reload(Algorithms)
+importlib.reload(DataType)
+from OptimisationAlgorithmToolkit.Algorithms import Polyak, Adam, HeavyBall, RMSProp, Adagrad, ConstantStep
+from OptimisationAlgorithmToolkit.DataType import meta, create_labels, get_titles
 #+end_src
 
 * Obtaining Functions
-
-- $f_1(x, y) = 3 \left(x - 9\right)^{4} + 5 \left(y - 9\right)^{2}$
-  - $\frac{df_{1}}{dx}(x,y) = 12 \left(x - 9\right)^{3}$
-  - $\frac{df_{1}}{dy}(x,y) = 10 y - 90$
+$\frac{\partial f_1}{\partial x_{1}}=12 \left(x_{1} - 9\right)^{3}, \frac{\partial f_1}{\partial x_{2}}=10 x_{2} - 90$
+$f_1(x_{1},x_{2}) = 3 \left(x_{1} - 9\right)^{4} + 5 \left(x_{2} - 9\right)^{2}$
 
 - $f_2(x, y) = 5 \left|{y - 9}\right| + \max\left(0, x - 9\right)$
   - $\frac{df_{2}}{dx}(x,y) = \theta\left(x - 9\right)$ - this is a Heaviside function
   - $\frac{df_{2}}{dy}(x,y) = 5 \operatorname{sign}{\left(y - 9 \right)}$
-    
+
+** Code :noexport:
+#+begin_src python :results none :exports none :tangle ./Week4Src.py
+from sympy import symbols, Max, Abs
+
+x1, x2 = symbols('x1 x2', real=True)
+sym_f1 = 3 * (x1-9)**4 + 5 * (x2-9)**2
+f1 = OptimisableFunction(sym_f1, [x1, x2], "f_1")
+
+sym_f2 = Max(x1-9 ,0) + 5 * Abs(x2-9)
+f2 = OptimisableFunction(sym_f2, [x1, x2], "f_2")
+#+end_src
+
 * (a) Implementing Optimisation Aglorithms
 ** Polyak Step Size
 - $\alpha = \frac{f(x) - f^*}{\Delta f(x)^T \Delta f(x) + \epsilon}$
@@ -131,10 +192,117 @@ $[ (1 - \beta_1)\frac{\partial f}{\partial x_1} (x_t), (1 - \beta_1)\frac{\parti
 
 $(1-\beta_{1})\Delta f(x_t) = [ (1 - \beta_1)\frac{\partial f}{\partial x_1} (x_t) + (1 - \beta_1)\frac{\partial f}{\partial x_2} (x_t) + \hdots  + (1 - \beta_1)\frac{\partial f}{\partial x_n}(x_t) ]$ ? 
 
+* (b) Inspecting Algorithm Behaviour
+- To save space plot multiple curves of function value vs iteration number on single plot.
+  - step size vs iteration
+  - y value vs iteration
+  - contour plot
 
-* (b) Optimising Functions
-$\frac{\partial f_1}{\partial x_{1}}=12 \left(x_{1} - 9\right)^{3}, \frac{\partial f_1}{\partial x_{2}}=10 x_{2} - 90$
-$f_1(x_{1},x_{2}) = 3 \left(x_{1} - 9\right)^{4} + 5 \left(x_{2} - 9\right)^{2}$
+** (i) $\alpha$ and $\beta$ in RMSProp
+
+** (ii) $\alpha$ and $\beta$ in Heavy Ball
+** (iii) $\alpha$, $\beta_1$ and $\beta_2$ in RMSProp
+
+** Code :noexport:
+*** Test quadratic
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+outputs = ConstantStep.set_parameters(
+    x0=[[1]],
+    f=f_quadratic,
+    iters=50,
+    alpha=0.1).run()
+
+plot_y_vary_param(outputs, "x0").semilogy()
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+outputs2 = Adagrad.set_parameters(
+    x0=[[1], [2]],
+    f=f_quadratic,
+    iters=50,
+    alpha0=[0.2, 0.5, 0.8],               # this should determine each records label
+    eps=1e-5).run()
+# print(outputs)                            # output should probably contain labels
+                                          # and i control the plot title rather than the output
+
+# plot_y_vary_param(outputs, "alpha0").semilogy()   # can have utility functions to extract title stuff and strings
+#+end_src
+
+#+RESULTS:
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+a =  set({1, 2, 3})
+b = set({2, 3})
+a - b 
+#+end_src
+
+#+RESULTS:
+| 1 |
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+x = symbols('x', real=True)
+sym_f_quadratic = x**2
+f_quadratic = OptimisableFunction(sym_f_quadratic, [x], "f_q")
+
+print(RMSProp.all_parameters)
+
+outputs2 = Adagrad.set_parameters(
+    x0=[[1], [2]],
+    f=f_quadratic,
+    iters=50,
+    alpha0=[0.2, 0.5, 0.8],               # this should determine each records label
+    eps=1e-5).run()
+
+RMSProp.set_parameters(
+    x0=[1],
+    f=f_quadratic,
+    iters=50,
+    alpha0=0.06,
+    beta=[0.1, 0.2, 0.9],
+    eps=1e-5)
+outputs = RMSProp.run()
+print(outputs[0]['Y'])
+# ax = plot_y_vary_param(outputs, "beta")
+# ax.semilogy()
+a = outputs + outputs2
+create_labels(a)
+t = get_titles(a)
+print(t)
+print(a[4]['label'])
+#+end_src
+
+#+RESULTS:
+: ('x0', 'f', 'alpha0', 'beta', 'eps', 'iters')
+: [1, 0.7744, 0.6670884451118795, 0.5728810775648908, 0.48635568503715226, 0.4070152686083506, 0.33480471700253883, 0.2697113765903326, 0.21172517738577293, 0.1608340066675227, 0.11702221512889699, 0.08026871560573763, 0.05054356526374296, 0.027800977662262735, 0.011962542840321638, 0.0028652985628994623, 6.210885341954861e-06, 2.4681843104832683e-05, 0.001072758984218594, 0.0009168270280496842, 0.000872149991968518, 0.0009172354785382298, 0.0008901654698807918, 0.0009046112476984058, 0.0008972155781964292, 0.0009009468703284158, 0.0008990759547489987, 0.0009000119778336547, 0.0008995441525329219, 0.0008997778921562405, 0.0008996611282174754, 0.0008997194542682174, 0.0008996903199956145, 0.0008997048726588406, 0.000899697603592074, 0.000899701234492874, 0.0008996994208585365, 0.0008997003267684718, 0.0008996998742667407, 0.0008997001002912125, 0.000899699987392064, 0.0008997000437851514, 0.0008997000156168229, 0.0008997000296868936, 0.0008997000226588979, 0.0008997000261693792, 0.0008997000244158951, 0.0008997000252917597, 0.0008997000248542655, 0.0008997000250727947, 0.0008997000249636385]
+: {'RMSProp': 'RMSProp: x0=[1] iters=50 eps=1e-05 alpha0=0.06', 'Adagrad': 'Adagrad: iters=50 eps=1e-05'}
+: Adagrad 	 x0=[1] alpha0=0.5
+
+*** RMS
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+print(RMSProp.all_parameters)
+RMSProp.set_parameters(
+    x0=[1, 1],
+    f=f1,
+    iters=10,
+    alpha0=0.05,
+    beta=[0.1, 0.2, 0.9],
+    eps=0.0001)
+outputs = RMSProp.run()
+print(outputs[0]['Y'])
+plot_y_vary_param(outputs, "beta")
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: ('x0', 'f', 'alpha0', 'beta', 'eps', 'iters')
+: [12608, 24041835038.028812, 24024899458.500347, 24008761126.55103, 23992703838.156597, 23976661842.626972, 23960628616.26208, 23944603504.804234, 23928586440.412037, 23912577413.880844, 23896576421.870003]
+[[file:./.ob-jupyter/036da439b7425b723533f794f119d34332bbaa9e.png]]
+:END:
+
+*** Heavy Ball
+*** RMSProp
+*** Contour Plot
 #+begin_src python :results replace :exports code :tangle ./Week4Src.py
 # countour plot
 delta = 0.2
@@ -170,4 +338,7 @@ cbar = fig.colorbar(CS)
 ax.set_title('Simplest default with labels')
 #+end_src
 
-* (c) Optimising Relu
+* (c) Optimising ReLu - $Max(0, x)$
+** (i) Initial Condition $x = -1$
+** (ii) Initial Condition $x = +1$
+** (iii) Initial Condition $x =+100$

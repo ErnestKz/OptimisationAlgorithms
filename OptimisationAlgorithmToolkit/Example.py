@@ -1,7 +1,7 @@
 from Function import OptimisableFunction
 from Algorithms import Polyak, Adam, HeavyBall, RMSProp
 from Datatype import make_input, run_optimisations
-from Plotting import plot_y
+from Plotting import plot_y_vary_param
 
 from sympy import symbols, Max, Abs
 
@@ -16,17 +16,25 @@ algs = [Polyak, Adam, HeavyBall, RMSProp]
 for a in algs:
     print(a.algorithm_name, a.hyperparameters)
 
-f2_standard = make_input(x0=[20,20],
-                         f=f2,
-                         iters=50)[0]
+Polyak.set_parameters(
+    x0=[20,20],
+    f=f1,
+    iters=[50,100],
+    f_star=0,
+    eps=0.002)
 
-f1_standard = make_input(x0=[20,20],
-                         f=f1,
-                         iters=50)[0]
+Adam.set_parameters(
+    x0=[20,20],
+    f=f1,
+    beta1=0.2,
+    beta2=0.2,
+    alpha=0.2,
+    iters=[50,100],
+    eps=0.002)
 
-polyak_standard = make_input(f_star=0,
-                             eps=0.001)[0]
-
-polyak_data = make_input(**f2_standard, **polyak_standard)
-run_optimisations(Polyak, polyak_data)
-plot_y(polyak_data)
+# outputs = run_optimisations(Polyak)
+# a = outputs[0]
+# del a['X']
+# del a['Y']
+# print(a)
+# plot_y(outputs)
