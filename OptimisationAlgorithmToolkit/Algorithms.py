@@ -34,6 +34,8 @@ class OptimisationAlgorithm:
         inputs = self.__make_input()
         for input in inputs:
             input["X"], input["Y"] = self.algorithm(**input)
+            input["X"] = np.array(input["X"])
+            input["Y"] = np.array(input["Y"])
             input["algorithm"] = self
         return inputs
 
@@ -138,8 +140,8 @@ HeavyBall = OptimisationAlgorithm(algorithm=heavy_ball,
 def adam(x0, f, eps, beta1, beta2, alpha, iters):
     dfs = f.partial_derivatives ; f = f.function ; x = x0 ; X = [x] ; Y = [f(*x)]
     
-    m = np.zeros(len(dfs)) ; np.zeros(len(dfs))
-    for k in range(iters_max):
+    m = np.zeros(len(dfs)) ; v = np.zeros(len(dfs))
+    for k in range(iters):
         i = k + 1
         m = beta1 * m + (1 - beta1) * np.array([df(*x) for df in dfs])
         v = beta2 * v + (1 - beta2) * np.array([(df(*x)**2) for df in dfs])

@@ -45,6 +45,21 @@
 #+LaTeX_HEADER: \newcommand\figwidth{0.48}
 
 #+begin_src elisp :results none :exports none
+(use-package jupyter
+  :config
+  (org-babel-do-load-languages 'org-babel-load-languages '((emacs-lisp . t)
+							   (python . t)
+							   (jupyter . t)))
+  (org-babel-jupyter-override-src-block "python")
+  (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images)
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((emacs-lisp . t)
+     (python . t)
+     (jupyter . t))))
+#+end_src
+
+#+begin_src elisp :results none :exports none
 (setq-local org-image-actual-width '(512))
 (setq-local org-confirm-babel-evaluate nil)
 (setq-local org-src-preserve-indentation 't)
@@ -76,7 +91,7 @@ importlib.reload(DataType)
 importlib.reload(Plotting)
 from OptimisationAlgorithmToolkit.Algorithms import Polyak, Adam, HeavyBall, RMSProp, Adagrad, ConstantStep
 from OptimisationAlgorithmToolkit.DataType import create_labels, get_titles
-from OptimisationAlgorithmToolkit.Plotting import ploty
+from OptimisationAlgorithmToolkit.Plotting import ploty, plot_contour
 #+end_src
 
 * Obtaining Functions
@@ -86,8 +101,6 @@ $f_1(x_{1},x_{2}) = 3 \left(x_{1} - 9\right)^{4} + 5 \left(x_{2} - 9\right)^{2}$
 - $f_2(x, y) = 5 \left|{y - 9}\right| + \max\left(0, x - 9\right)$
   - $\frac{df_{2}}{dx}(x,y) = \theta\left(x - 9\right)$ - this is a Heaviside function
   - $\frac{df_{2}}{dy}(x,y) = 5 \operatorname{sign}{\left(y - 9 \right)}$
-
-
 ** Code :noexport:
 *** Sympy
 #+begin_src python :results none :exports none :tangle ./Week4Src.py
@@ -199,7 +212,7 @@ $(1-\beta_{1})\Delta f(x_t) = [ (1 - \beta_1)\frac{\partial f}{\partial x_1} (x_
   - step size vs iteration
   - y value vs iteration
   - contour plot
-
+    
 ** (i) $\alpha$ and $\beta$ in RMSProp
 
 *** Code :noexport:
@@ -210,32 +223,252 @@ print(RMSProp.all_parameters)
 #+RESULTS:
 : ('x0', 'f', 'alpha0', 'beta', 'eps', 'iters')
 **** f1
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-RMSProp.set_parameters(
-    x0=[1, 1],
+
+#+begin_src python :results none :exports none :tangle ./Week4Src.py
+# outputs = RMSProp.set_parameters(
+#     x0= [0, 0],
+#     f=f1,
+#     iters=10,
+#     alpha0=[0.05, 0.5],
+#     beta=[0.2, 0.98],
+#     eps=0.0001).run()
+
+outputs = RMSProp.set_parameters(
+    x0= [0, 0],
     f=f1,
     iters=10,
     alpha0=0.05,
-    beta=[0.1, 0.2, 0.9],
-    eps=0.0001)
-outputs = RMSProp.run()
+    beta=0.98,
+    eps=0.0001).run()
 
-ploty(outputs)
 #+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+ploty(outputs).semilogy()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: []
+[[file:./.ob-jupyter/5d1b5cea5692c3e2d513a3632cdc560e874ff615.png]]
+:END:
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+l = np.linspace(-3, 19, 40)
+l2 = np.linspace(-30, 30, 40)
+plot_contour(outputs, l, l2, log=True)
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/cfc7768f959dff967830e8d53aba75dd5a5a9038.png]]
 **** f2
 #+begin_src python :results replace :exports none :tangle ./Week4Src.py
 RMSProp.set_parameters(
-    x0=[1, 1],
+    x0=[20, 20],
     f=f2,
     iters=10,
-    alpha0=0.05,
-    beta=[0.1, 0.2, 0.9],
+    alpha0=[0.8, 0.05],
+    beta=[0.2, 0.98],
     eps=0.0001)
 outputs = RMSProp.run()
+ploty(outputs)
 #+end_src
+
 ** (ii) $\alpha$ and $\beta$ in Heavy Ball
-** (iii) $\alpha$, $\beta_1$ and $\beta_2$ in RMSProp
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+print(HeavyBall.all_parameters)
+#+end_src
+
+#+RESULTS:
+: ('x0', 'f', 'alpha', 'beta', 'iters')
+
+**** f1
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+outputs = HeavyBall.set_parameters(
+    x0= [0, 0],
+    f=f1,
+    iters=50,
+    alpha=[0.0001,0.00001],
+    beta=[0.98, 0.8, 0.4]).run()
+v2 = HeavyBall.set_parameters(
+    x0= [0, 0],
+    f=f1,
+    iters=50,
+    alpha=[0.0001,0.00001],
+    beta=[0.98, 0.8, 0.4]).run()
+#+end_src
+
+#+RESULTS:
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+ploty(outputs).semilogy()
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+plot_contour(v1+v2, l, l2, log=True)
+#+end_src
+
+**** f2
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+outputs = HeavyBall.set_parameters(
+    x0= [0, 0],
+    f=f2,
+    iters=20,
+    alpha=[0.1, 0.8],
+    beta=[0.8, 0.4]).run()
+ploty(outputs)
+#+end_src
+
+** (iii) $\alpha$, $\beta_1$ and $\beta_2$ in Adam
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+print(Adam.all_parameters)
+#+end_src
+
+#+RESULTS:
+: ('x0', 'f', 'eps', 'beta1', 'beta2', 'alpha', 'iters')
+
+**** f1
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+outputs = Adam.set_parameters(
+    x0= [0, 0],
+    f=f1,
+    iters=200,
+    alpha=10,
+    beta1=[0.90, 0.98],
+    beta2=[0.9, 0.98],
+    eps=1e-5).run()
+ploty(outputs).semilogy()
+#+end_src
+
+**** f2
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+outputs = Adam.set_parameters(
+    x0= [0, 0],
+    f=f2,
+    iters=200,
+    alpha=1,
+    beta1=[0.98, 0.8, 0.3],
+    beta2=[0.98, 0.78],
+    eps=1e-5).run()
+ploty(outputs)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: <AxesSubplot:title={'center':'Adam: x0=[0 0] iters=200 alpha=1 eps=1e-05\n'}, xlabel='$i$', ylabel='$f_2$'>
+[[file:./.ob-jupyter/b8c603db78e3ff71a6299b8a5939054b9379dae3.png]]0.98
+:END:
+
 * (c) Optimising ReLu - $Max(0, x)$
+#+begin_src python :results none :exports none :tangle ./Week4Src.py
+x = symbols('x', real=True)
+sym_f_relu = Max(0, x)
+f_relu = OptimisableFunction(sym_f_relu, [x], "reLu")
+#+end_src
+
 ** (i) Initial Condition $x = -1$
+*** Code :noexport:
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+x_init = -1
+
+adam_o = Adam.set_parameters(
+    x0=[x_init],
+    f=f_relu,
+    iters=10,
+    alpha=1,
+    beta1=[0.98],
+    beta2=[0.98],
+    eps=1e-5).run()
+heavyball_o = HeavyBall.set_parameters(
+    x0=[x_init],
+    f=f_relu,
+    iters=10,
+    alpha=[1],
+    beta=[0.98]).run()
+rmsprop_o = RMSProp.set_parameters(
+    x0=[x_init],
+    f=f_relu,
+    iters=10,
+    alpha0=[1],
+    beta=[0.98],
+    eps=0.0001).run()
+outputs = adam_o + heavyball_o + rmsprop_o
+
+# print(outputs)
+ploty(outputs)
+#+end_src
+
 ** (ii) Initial Condition $x = +1$
+*** Code :noexport:
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+x_init = 1
+
+adam_o = Adam.set_parameters(
+    x0=[x_init],
+    f=f_relu,
+    iters=10,
+    alpha=1,
+    beta1=[0.98],
+    beta2=[0.98],
+    eps=1e-5).run()
+heavyball_o = HeavyBall.set_parameters(
+    x0=[x_init],
+    f=f_relu,
+    iters=10,
+    alpha=[1],
+    beta=[0.98]).run()
+rmsprop_o = RMSProp.set_parameters(
+    x0=[x_init],
+    f=f_relu,
+    iters=10,
+    alpha0=[1],
+    beta=[0.98],
+    eps=0.0001).run()
+outputs = adam_o + heavyball_o + rmsprop_o
+
+# print(outputs)
+ploty(outputs)
+#+end_src
+
 ** (iii) Initial Condition $x =+100$
+*** Code :noexport:
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+x_init = 100
+iters = 100
+adam_o = Adam.set_parameters(
+    x0=[x_init],
+    f=f_relu,
+    iters=iters,
+    alpha=1,
+    beta1=[0.98],
+    beta2=[0.98],
+    eps=1e-5).run()
+heavyball_o = HeavyBall.set_parameters(
+    x0=[x_init],
+    f=f_relu,
+    iters=iters,
+    alpha=[1],
+    beta=[0.98]).run()
+rmsprop_o = RMSProp.set_parameters(
+    x0=[x_init],
+    f=f_relu,
+    iters=iters,
+    alpha0=[1],
+    beta=[0.98],
+    eps=0.0001).run()
+outputs = adam_o + heavyball_o + rmsprop_o
+
+# print(outputs)
+ploty(outputs)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: <AxesSubplot:title={'center':'Heavy Ball: iters=100 alpha=1 x0=[100] beta=0.98\nRMSProp: beta=0.98 iters=100 alpha0=1 x0=[100] eps=0.0001\nAdam: beta1=0.98 beta2=0.98 iters=100 alpha=1 x0=[100] eps=1e-05\n'}, xlabel='$i$', ylabel='$reLu$'>
+[[file:./.ob-jupyter/0f7e4fa67bccbb61b41b57180de91ab5688d6eb8.png]]
+:END:
