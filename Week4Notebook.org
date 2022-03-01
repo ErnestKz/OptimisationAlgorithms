@@ -53,54 +53,15 @@
 (setq org-latex-prefer-user-labels t)
 #+end_src
 
+* Python Imports :noexport:
 #+begin_src python :results none :exports none :tangle ./Week4Src.py
 import matplotlib as mpl
 mpl.rcParams['figure.dpi'] = 200
 mpl.rcParams['figure.facecolor'] = '1'
 import matplotlib.pyplot as plt
-#+end_src
+plt.style.use('seaborn-white')
 
-#+begin_src python :results none :exports none :tangle ./Week4Src.py
-def plot_y_vary_param(inputs, comparing):
-    i = inputs[0]
-    f = i['f']
-    function_name = f.function_name
-    function_latex = f.latex()
-    
-    opt_alg = i['algorithm']
-    algorithm_name = opt_alg.algorithm_name
-
-    hyperparams = (opt_alg.hyperparameters + ['x0'])
-    hyperparams.remove(comparing)
-    
-    hs = hyperparams_string(i, hyperparams)
-    top = (rf'{algorithm_name} on ${function_latex}$ varying {comparing}')
-    title_string = top + " \n" +hs
-
-    fig, ax = plt.subplots()
-    ax.set_title(title_string)
-    ax.set_ylabel(f'${function_name}$')
-    ax.set_xlabel(r'$i$')
-
-    rangei = 50
-    legend_labels = []
-    for (X, Y, var) in dicts_collect(("X", "Y", comparing), inputs):
-        ax.plot(range(len(Y)), Y, linewidth=2.0)
-        legend_labels += [(comparing + ": " + str(var))]
-    ax.legend(legend_labels)
-    return ax
-
-def hyperparams_string(inputs, hyperparams):
-    string = ""
-    for p in hyperparams:
-        string += f"{p}={inputs[p]}, "
-    return string[0:-2]
-
-def dicts_collect(keys, dicts):
-    values = []
-    for dict in dicts:
-        values += [[dict[key] for key in keys]]
-    return values
+import numpy as np
 #+end_src
 
 #+begin_src python :results none :exports none :tangle ./Week4Src.py
@@ -126,7 +87,9 @@ $f_1(x_{1},x_{2}) = 3 \left(x_{1} - 9\right)^{4} + 5 \left(x_{2} - 9\right)^{2}$
   - $\frac{df_{2}}{dx}(x,y) = \theta\left(x - 9\right)$ - this is a Heaviside function
   - $\frac{df_{2}}{dy}(x,y) = 5 \operatorname{sign}{\left(y - 9 \right)}$
 
+
 ** Code :noexport:
+*** Sympy
 #+begin_src python :results none :exports none :tangle ./Week4Src.py
 from sympy import symbols, Max, Abs
 
@@ -136,7 +99,43 @@ f1 = OptimisableFunction(sym_f1, [x1, x2], "f_1")
 
 sym_f2 = Max(x1-9 ,0) + 5 * Abs(x2-9)
 f2 = OptimisableFunction(sym_f2, [x1, x2], "f_2")
+
+x = symbols('x', real=True)
+sym_f_quadratic = x**2
+f_quadratic = OptimisableFunction(sym_f_quadratic, [x], "f_q")
 #+end_src
+*** Contour Plot
+
+#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+from matplotlib.ticker import LogLocator
+
+l = np.linspace(-3, 19, 40)
+l2 = np.linspace(-100, 100, 40)
+l2 = l
+x1s = l
+x2s = l2
+X1, X2 = np.meshgrid(x1s, x2s)
+Z = np.vectorize(f1.function)(X1, X2)
+plt.contourf(X1, X2, Z, locator=LogLocator(), cmap='RdGy')
+plt.colorbar();
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/30bbcd3d6614ceef34a916c3ab92396fe6402800.png]]
+
+#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+l = np.linspace(-10, 40, 100)
+x1s = l
+x2s = l
+X1, X2 = np.meshgrid(x1s, x2s)
+Z = np.vectorize(f2.function)(X1, X2)
+# plt.contour(X1, X2, Z, cmap='RdGy')
+plt.contourf(X1, X2, Z, cmap='RdGy')
+plt.colorbar();
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/5efb816825fa613a8550f9e6bf030ee40080e736.png]]
 
 * (a) Implementing Optimisation Aglorithms
 ** Polyak Step Size
@@ -203,98 +202,15 @@ $(1-\beta_{1})\Delta f(x_t) = [ (1 - \beta_1)\frac{\partial f}{\partial x_1} (x_
 
 ** (i) $\alpha$ and $\beta$ in RMSProp
 
-** (ii) $\alpha$ and $\beta$ in Heavy Ball
-** (iii) $\alpha$, $\beta_1$ and $\beta_2$ in RMSProp
-
-** Code :noexport:
-*** Test quadratic
-
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-outputs = ConstantStep.set_parameters(
-    x0=[[1]],
-    f=f_quadratic,
-    iters=50,
-    alpha=0.1).run()
-
-plot_y_vary_param(outputs, "x0").semilogy()
-#+end_src
-
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-outputs2 = Adagrad.set_parameters(
-    x0=[[1], [2]],
-    f=f_quadratic,
-    iters=50,
-    alpha0=[0.2, 0.5, 0.8],               # this should determine each records label
-    eps=1e-5).run()
-# print(outputs)                            # output should probably contain labels
-                                          # and i control the plot title rather than the output
-
-# plot_y_vary_param(outputs, "alpha0").semilogy()   # can have utility functions to extract title stuff and strings
-#+end_src
-
-#+RESULTS:
-
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-a =  set({1, 2, 3})
-b = set({2, 3})
-a - b 
-#+end_src
-
-#+RESULTS:
-| 1 |
-
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-x = symbols('x', real=True)
-sym_f_quadratic = x**2
-f_quadratic = OptimisableFunction(sym_f_quadratic, [x], "f_q")
-
-ada_out = Adagrad.set_parameters(
-    x0=[1],
-    f=f_quadratic,
-    iters=4,
-    alpha0=[0.3],               # this should determine each records label
-    eps=1e-5).run()
-rms_out = RMSProp.set_parameters(
-    x0=[1],
-    f=f_quadratic,
-    iters=4,
-    alpha0=0.3,
-    beta=0.1,
-    eps=1e-5).run()
-comb_out = rms_out + ada_out
-
-# ada_out = Adagrad.set_parameters(
-#     x0=[1],
-#     f=f_quadratic,
-#     iters=50,
-#     alpha0=0.2,               # this should determine each records label
-#     eps=1e-5).run()
-# rms_out = RMSProp.set_parameters(
-#     x0=[1],
-#     f=f_quadratic,
-#     iters=50,
-#     alpha0=0.06,
-#     beta=0.1,
-#     eps=1e-5).run()
-# comb_out = rms_out + ada_out
-
-create_labels(comb_out)
-t = get_titles(comb_out )
-# t = get_titles(comb_out, ['x0', 'iters'])
-
-ax = ploty(comb_out)
-ax.set_title(f'{t["Adagrad"]} \n {t["RMSProp"]}')
-#+end_src
-
-#+RESULTS:
-:RESULTS:
-: Text(0.5, 1.0, 'Adagrad: x0=[1] iters=4 eps=1e-05 alpha0=0.3 \n RMSProp: beta=0.1 iters=4 alpha0=0.3 x0=[1] eps=1e-05')
-[[file:./.ob-jupyter/255aed1ec036568a7f06bf8e0f8d9fa3b5fc6175.png]]
-:END:
-
-*** RMS
+*** Code :noexport:
 #+begin_src python :results replace :exports none :tangle ./Week4Src.py
 print(RMSProp.all_parameters)
+#+end_src
+
+#+RESULTS:
+: ('x0', 'f', 'alpha0', 'beta', 'eps', 'iters')
+**** f1
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
 RMSProp.set_parameters(
     x0=[1, 1],
     f=f1,
@@ -303,55 +219,22 @@ RMSProp.set_parameters(
     beta=[0.1, 0.2, 0.9],
     eps=0.0001)
 outputs = RMSProp.run()
-print(outputs[0]['Y'])
-plot_y_vary_param(outputs, "beta")
+
+ploty(outputs)
 #+end_src
-
-#+RESULTS:
-:RESULTS:
-: ('x0', 'f', 'alpha0', 'beta', 'eps', 'iters')
-: [12608, 24041835038.028812, 24024899458.500347, 24008761126.55103, 23992703838.156597, 23976661842.626972, 23960628616.26208, 23944603504.804234, 23928586440.412037, 23912577413.880844, 23896576421.870003]
-[[file:./.ob-jupyter/036da439b7425b723533f794f119d34332bbaa9e.png]]
-:END:
-
-*** Heavy Ball
-*** RMSProp
-*** Contour Plot
-#+begin_src python :results replace :exports code :tangle ./Week4Src.py
-# countour plot
-delta = 0.2
-x1s = np.arange(0, 15, delta)
-x2s = np.arange(0, 15, delta)
-X1, X2 = np.meshgrid(x1s, x2s)
-# for each pair of the x1s and x2s, there is a y value
-
-# Z1 = np.exp(-X1**2 - X2**2)
-# Z2 = np.exp(-(X1 - 1)**2 - (X2 - 1)**2)
-# Z = (Z1 - Z2) * 2
-
-print(x1s.shape)
-print(x2s.shape)
-print(X1.shape)
-print(X2.shape)
-print(Z.shape)
-from matplotlib import ticker, cm
-# Z = np.vectorize(f1l)(X1, X2)
-Z = np.vectorize(f1l)(X1, X2)
-fig, ax = plt.subplots()
-CS = ax.contourf(X1, X2, Z,
-                cmap=cm.PuBu_r,
-                locator=ticker.LogLocator()
-                 )
-# manual_locations = [
-#     (-1, -1.4), (-0.62, -0.7), (-2, 0.5), (1.7, 1.2), (2.0, 1.4), (2.4, 1.7)]
-ax.clabel(CS, inline=True, fontsize=10,
-          # manual=manual_locations
-          
-          )
-cbar = fig.colorbar(CS)
-ax.set_title('Simplest default with labels')
+**** f2
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+RMSProp.set_parameters(
+    x0=[1, 1],
+    f=f2,
+    iters=10,
+    alpha0=0.05,
+    beta=[0.1, 0.2, 0.9],
+    eps=0.0001)
+outputs = RMSProp.run()
 #+end_src
-
+** (ii) $\alpha$ and $\beta$ in Heavy Ball
+** (iii) $\alpha$, $\beta_1$ and $\beta_2$ in RMSProp
 * (c) Optimising ReLu - $Max(0, x)$
 ** (i) Initial Condition $x = -1$
 ** (ii) Initial Condition $x = +1$
