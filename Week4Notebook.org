@@ -92,6 +92,8 @@ importlib.reload(Plotting)
 from OptimisationAlgorithmToolkit.Algorithms import Polyak, Adam, HeavyBall, RMSProp, Adagrad, ConstantStep
 from OptimisationAlgorithmToolkit.DataType import create_labels, get_titles
 from OptimisationAlgorithmToolkit.Plotting import ploty, plot_contour
+
+from OptimisationAlgorithmToolkit.Plotting import plot_step_size
 #+end_src
 
 * Obtaining Functions
@@ -214,8 +216,22 @@ $(1-\beta_{1})\Delta f(x_t) = [ (1 - \beta_1)\frac{\partial f}{\partial x_1} (x_
   - contour plot
     
 ** (i) $\alpha$ and $\beta$ in RMSProp
-
 *** Code :noexport:
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+a = np.array([1,2,3,4])
+print(a[:-1])
+res = np.array([])
+res = np.stack((a, a, a))
+print(res)
+#+end_src
+
+#+RESULTS:
+: [1 2 3]
+: [[1 2 3 4]
+:  [1 2 3 4]
+:  [1 2 3 4]]
+
 #+begin_src python :results replace :exports none :tangle ./Week4Src.py
 print(RMSProp.all_parameters)
 #+end_src
@@ -240,7 +256,6 @@ outputs = RMSProp.set_parameters(
     alpha0=0.05,
     beta=0.98,
     eps=0.0001).run()
-
 #+end_src
 
 #+begin_src python :results replace :exports none :tangle ./Week4Src.py
@@ -260,7 +275,23 @@ plot_contour(outputs, l, l2, log=True)
 #+end_src
 
 #+RESULTS:
+:RESULTS:
+#+begin_example
+RMSProp
+[[  0.           0.        ]
+ [437.4          4.5       ]
+ [437.04644661   4.85354784]
+ [436.79549538   5.09442879]
+ [436.58971928   5.28674577]
+ [436.41072151   5.45045503]
+ [436.24989807   5.59476707]
+ [436.10241747   5.72481311]
+ [435.96525063   5.84379305]
+ [435.83635221   5.95385922]
+ [435.7142652    6.05654033]]
+#+end_example
 [[file:./.ob-jupyter/cfc7768f959dff967830e8d53aba75dd5a5a9038.png]]
+:END:
 **** f2
 #+begin_src python :results replace :exports none :tangle ./Week4Src.py
 RMSProp.set_parameters(
