@@ -950,6 +950,11 @@ ax.set_title(r'$x$ Value at Beginning of each Iteration' "\n"
 \lstset{style=mystyle}
 
 \lstinputlisting[language=Python]{Week2Src.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/Algorithms.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/DataType.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/Function.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/Plotting.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/__init__.py}
 
 %\inputminted{Python}{Week2Src.py}
 #+end_export

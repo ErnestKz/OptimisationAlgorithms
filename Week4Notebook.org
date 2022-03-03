@@ -1,5 +1,5 @@
 #+AUTHOR:Ernests Kuznecovs - 17332791 - kuznecoe@tcd.ie
-#+Date:16th February 2022
+#+Date:2nd March
 #+Title:Optimisation Algorithms - Week 4 Assignment
 
 #+begin_export latex
@@ -75,7 +75,7 @@ mpl.rcParams['figure.dpi'] = 200
 mpl.rcParams['figure.facecolor'] = '1'
 import matplotlib.pyplot as plt
 plt.style.use('seaborn-white')
-
+import copy
 import numpy as np
 #+end_src
 
@@ -91,12 +91,10 @@ importlib.reload(DataType)
 importlib.reload(Plotting)
 from OptimisationAlgorithmToolkit.Algorithms import Polyak, Adam, HeavyBall, RMSProp, Adagrad, ConstantStep
 from OptimisationAlgorithmToolkit.DataType import create_labels, get_titles
-from OptimisationAlgorithmToolkit.Plotting import ploty, plot_contour
-
-from OptimisationAlgorithmToolkit.Plotting import plot_step_size
+from OptimisationAlgorithmToolkit.Plotting import ploty, plot_contour, plot_path, plot_step_size
 #+end_src
 
-* Obtaining Functions
+* Obtaining Functions :noexport:
 $\frac{\partial f_1}{\partial x_{1}}=12 \left(x_{1} - 9\right)^{3}, \frac{\partial f_1}{\partial x_{2}}=10 x_{2} - 90$
 $f_1(x_{1},x_{2}) = 3 \left(x_{1} - 9\right)^{4} + 5 \left(x_{2} - 9\right)^{2}$
 
@@ -121,7 +119,7 @@ f_quadratic = OptimisableFunction(sym_f_quadratic, [x], "f_q")
 #+end_src
 *** Contour Plot
 
-#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
 from matplotlib.ticker import LogLocator
 
 l = np.linspace(-3, 19, 40)
@@ -138,7 +136,7 @@ plt.colorbar();
 #+RESULTS:
 [[file:./.ob-jupyter/30bbcd3d6614ceef34a916c3ab92396fe6402800.png]]
 
-#+begin_src python :results replace :exports code :tangle ./Week4Src.py
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py
 l = np.linspace(-10, 40, 100)
 x1s = l
 x2s = l
@@ -153,258 +151,499 @@ plt.colorbar();
 [[file:./.ob-jupyter/5efb816825fa613a8550f9e6bf030ee40080e736.png]]
 
 * (a) Implementing Optimisation Aglorithms
+Numpy is used for the elegent vectorised multiplication, division, addition, substraction.
+ - e.g in numpys notation: [3 2 1] * [6 5 4] = [(3 * 6) (2 * 5) (1 * 6)]
+   - And this sort of element wise operations works the same for
+     - (-) (+) (/) (np.sqrt())
 ** Polyak Step Size
-- $\alpha = \frac{f(x) - f^*}{\Delta f(x)^T \Delta f(x) + \epsilon}$
+Step size is calcluated with $\alpha = \frac{f(x) - f^*}{\nabla f(x)^T \nabla f(x) + \epsilon}$
 - $x$ is a vector
-- $[\frac{\partial f}{\partial x_1}(x), \frac{\partial f}{\partial x_2} (x), \ldots, \frac{\partial f}{\partial x_n}(x)] = \Delta f(x)$
-- $\Delta f(x)^{T} \Delta f(x) = \sum\limits_{i=1}^{n} \frac{\partial f}{\partial x_i} (x)^2$
-** Adagrad step
-
-$\alpha_x = \frac{a_0}{\sqrt{ \frac{df}{dx} (\vec{x}_0)^2 + \frac{df}{dx}(\vec{x}_1)^2 + \hdots + \frac{df}{dx}(\vec{x}_{t-1})^{2}} + \epsilon} = \frac{\alpha_0}{\sqrt{\sum\limits_{i=1}^{t-1} \frac{df}{dx}(x_i)^2}+\epsilon}$
-$t=1$
-$\alpha_1 = \frac{a_0}{\sqrt{ \frac{df}{dx_1} (\vec{x}_0)^2} + \epsilon}$
-$\alpha_2 = \frac{a_0}{\sqrt{ \frac{df}{dx_2} (\vec{x}_0)^2} + \epsilon}$
-
-$t=2$
-$\alpha_1 = \frac{a_0}{\sqrt{ \frac{df}{dx_1} (\vec{x}_0)^2 + \frac{df}{dx_2}(\vec{x}_1)^2}+ \epsilon}$
-$\alpha_2 = \frac{a_0}{\sqrt{ \frac{df}{d\vec{x}_2} (\vec{x}_0)^2 + \frac{df}{dx_2}(\vec{x}_1)^2}  + \epsilon} }$
-
-so we can just hold $\frac{df}{dx_1} (\vec{x}_0)^2 + \frac{df}{dx_2}(\vec{x}_1)^2$ bit in a variable
-and then sum $\frac{df}{dx_3}(\vec{x}_3)^2$ onto the variable when it comes
-and we can discard $\vec{x}_0, \vec{x}_1$, as its not used anywhere else
-
-so for multiple partials, can hold the sums in a vector
-upon each iteration calculate the new partial squared for each partial(this will give us a vector) and then sum each to the according sum in the vector
+- $[\frac{\partial f}{\partial x_1}(x), \frac{\partial f}{\partial x_2} (x), \ldots, \frac{\partial f}{\partial x_n}(x)] = \nabla f(x)$
+- $\nabla f(x)^{T} \nabla f(x) = \sum\limits_{i=1}^{n} \frac{\partial f}{\partial x_i} (x)^2$
+- $f^{*}$ is our prediction of the minimum value of f.
+- $\epsilon$ is mainly to prevent division by zero, but also has the effect of making the algebra work out such that the expression doesn't reduce to a constant value for when $f^{*} = 0$ aswell.
+In the code:
+- Each partial derivative is calculated at $x$ and squared, and then summed.
+- $\epsilon$ is added to the sum and then used as the divisor for $f(x) - f^{*}$, the resulting number is the step size.
+- Each parital at $x$ is multiplied by the step size and the $x$ is updated by taking away the resulting product.
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+for _ in range(iters):
+    fdif = f(*x) - f_star
+    df_squared_sum = np.sum(np.array([df(*x)**2 for df in dfs]))
+    alpha = fdif / (df_squared_sum + eps)
+    x = x - alpha * np.array([df(*x) for df in dfs])
+#+end_src
 
 ** RMSProp
-
-$a_t = \frac{ a_0 }{ \sqrt{(1 - \beta) \beta^t \frac{df}{dx}(x_0)^2 + (1 - \beta) \beta^{t-1} \frac{df}{dx}(x_1)^2 + \hdots + (1 - \beta) \frac{df}{dx} (x_{t-1})^2} + \epsilon}$
-$0 < \beta \leq 1$
-
-- We only need to keep track of the sum, as the we dont use x0 anymore.
-- We can simply multiply the sum with Beta to scale it and it will have the same effect.
-
+For one $\frac{df(x)}{dx}$, $a_t = \frac{ a_0 }{ \sqrt{(1 - \beta) \beta^t \frac{df}{dx}(x_0)^2 + (1 - \beta) \beta^{t-1} \frac{df}{dx}(x_1)^2 + \hdots + (1 - \beta) \frac{df}{dx} (x_{t-1})^2} + \epsilon}$, $0 < \beta \leq 1$
+- The summing and multiplicaiton of past derivatives values can be implemented by keeping track of the derivatives sums and then simply multiplying the previous iterations sum by $\beta$.
+  - Since only need to keep track of the sum, as the we dont keep track of previous x's.
+- Each partial derivatives gets its own running average.
+- We then calculate alpha for each by squaring each of the sums, adding epsilon, and then using it as a divisor for alpha0, which is a hyperparameter that we choose.
+- The older derivatives become less and less impactful for the sum (smaller beta, faster forgetful), allowing the step size to increase if reach a region of small gradients for a while.
+  - Whereas succesive large gradients will cause the step size to reduce.
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+sum = np.zeros(len(dfs)) ; alpha = alpha0
+for _ in range(iters):
+    x = x - (alpha * np.array([df(*x) for df in dfs]))
+    sum = beta * sum + (1 - beta) * np.array([df(*x)**2 for df in dfs]) 
+    alpha = alpha0 / (np.sqrt(sum) + eps)
+#+end_src  
 ** Heavy Ball / Polyak Momentum
+- Here each partial is affected by its own history of steps just like RMSProp.
+- $\beta$ is used to gradually forget the previous steps, by multiplying the previous step $z_{t-1}$ by  $0 < \beta \leq 1$ on each iteration.
+- $z_{t-1} * \beta$ is added onto $\alpha * \nabla f(x)$ to construct $z_t$, where $\alpha$ is our hyperparameter we choose.
+- The vector $z_t$ is used as the step updates for our vector $x$.
+- If z ocillates forwards and backwards (keeps taking steps forwards and backwards), the next steps, will be inclined to go towards the middle of the two, since we are summing the negative and positive steps together.
+  - Wheras if going in one direction in successions theres many sums in that direction on the tail of z, so even when slope becomes small for current iteration, it still keeps the "momentum".
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+z = np.zeros(len(dfs))
+for _ in range(iters):
+    z = beta * z + alpha * np.array([df(*x) for df in dfs])
+    x = x - z
+#+end_src  
 
 ** Adam
-Posible to get rid of the betas with polyak?
-
 Adam $\approx$ RMSprop + heavy ball
-$m_{t+1} = \beta_1 m_t + (1 - \beta_1) \Delta f(x_t)$ heavy ball bit
-- note, there is no minimising weight on the most recent term, the term is applied only on the last ones
-  
-$v_{t+1} = \beta_2 v_t + (1 - \beta_2)[ \frac{\partial f}{\partial x_1} (x_t)^2, \frac{\partial f}{\partial x_2} (x_t)^{2}, \hdots , \frac{\partial f}{\partial x_n}(x_t)^2 ]$ this is rms bit, it is being summmed through each step
-$\hat{m}= \frac{m_{t+1}}{(1 - \beta^t_1)}, \hat{v}= \frac{v_{t+1}}{(1 - \beta^t_2)}$
-$x_{t+1} = x_{t} - \alpha [\frac{\hat{m}}{\sqrt{\hat{v_1}} + \epsilon}, \frac{\hat{m}}{\sqrt{\hat{v_2}} + \epsilon},\hdots,\frac{\hat{m}}{\sqrt{\hat{v_n}} + \epsilon}]$
-$m$ is running average of gradient $\Delta f(x_t)$
-$v$ is running average of square gradients
+- $m_{t+1} = \beta_1 m_t + (1 - \beta_1) \nabla f(x_t)$ heavy ball bit
+  - Although instead of the $\alpha$ that was used, we have the proper weighted running average counterpart, $(1 - \beta)$.
+- $v_{t+1} = \beta_2 v_t + (1 - \beta_2)[ \frac{\partial f}{\partial x_1} (x_t)^2, \frac{\partial f}{\partial x_2} (x_t)^{2}, \hdots , \frac{\partial f}{\partial x_n}(x_t)^2 ]$ this is rms bit.
+- $\hat{m}= \frac{m_{t+1}}{(1 - \beta^t_1)}, \hat{v}= \frac{v_{t+1}}{(1 - \beta^t_2)}$
+- $x_{t+1} = x_{t} - \alpha [\frac{\hat{m_1}}{\sqrt{\hat{v_1}} + \epsilon}, \frac{\hat{m_2}}{\sqrt{\hat{v_2}} + \epsilon},\hdots,\frac{\hat{m_n}}{\sqrt{\hat{v_n}} + \epsilon}]$
+- $m$ is running average of gradient $\nabla f(x_t)$, giving us information of the direction, for averaging/momentum.
+- $v$ is running average of square gradients, giving us information of the magnitude, for varying size of step.
 
-$\hat{v}_{i}$ is indexing/picking out elements from the vector of updates.
-
-
-Similary to heavy ball, large step size that spans a lot of the function does well.
-- It's like feeding a lot of information to the algorithm and the algorithm can take advantage of that.
-
-$[ (1 - \beta_1)\frac{\partial f}{\partial x_1} (x_t), (1 - \beta_1)\frac{\partial f}{\partial x_2} (x_t), \hdots , (1 - \beta_1)\frac{\partial f}{\partial x_n}(x_t) ]$
-
-$(1-\beta_{1})\Delta f(x_t) = [ (1 - \beta_1)\frac{\partial f}{\partial x_1} (x_t) + (1 - \beta_1)\frac{\partial f}{\partial x_2} (x_t) + \hdots  + (1 - \beta_1)\frac{\partial f}{\partial x_n}(x_t) ]$ ? 
+Thanks to numpy, the implementation looks quite identical to the formula.
+- We keep track of iteration number since we need it for mhat and vhat.
+- Same concept of keeping the sum part of the previous average, so that we can keep mulitply by $\beta$ to reduce the weight of the previous steps.
+  - Each weighted average has its won hyperparameters $\beta_1, \beta_2$
+- The weighted sums are normalised by  $\frac{1}{(1 - \beta^i)}$
+  - eps is used to prevent division by zero
+  - alpha scales the resulting step.
+    
+#+begin_src python :results none :exports code :tangle ./Week4Src.py
+m = np.zeros(len(dfs)) ; v = np.zeros(len(dfs))
+for k in range(iters):
+    i = k + 1
+    m = beta1 * m + (1 - beta1) * np.array([df(*x) for df in dfs])
+    v = beta2 * v + (1 - beta2) * np.array([(df(*x)**2) for df in dfs])
+    mhat = (m / (1 - beta1**i)) 
+    vhat = (v / (1 - beta2**i))
+    x = x - alpha * (mhat / (np.sqrt(vhat) + eps))
+#+end_src  
 
 * (b) Inspecting Algorithm Behaviour
-- To save space plot multiple curves of function value vs iteration number on single plot.
-  - step size vs iteration
-  - y value vs iteration
-  - contour plot
-    
 ** (i) $\alpha$ and $\beta$ in RMSProp
+*** Function 1
+Figs \ref{fig:rmsf1y} , \ref{fig:rmsf1c}, \ref{fig:rmsf1s} show plots of function value vs iteration, contour plot and path of algorithm, and step size vs iteration, for function 1.
+
+- An alpha higher than 2 would cause the optimisation algorithm to break on the first few iterations as it shoots off very far due to the very steep function.
+
+- The larger alphas shoot off into the distanace and very slowly begin making their way back to the optimum. The "reasonable" alphas start heading towards the optimium, but at a very slow pace (due to alphas being low).
+  - The ones that shoot off far make their way back slowly due to the step size being inverted to the magnitude of the past gradients. The huge initial jumps makes the step succeeding steps tiny.
+  - For the ones that shoot off, we see that the lower betas allow it to begin converging faster, this is because they forget the huge initial steps faster.
+  - Although we see beta=0.94 overtake the beta=0.6 as 0.6 gets stuck, for both large and small alphas.
+  - This is because the gradient becomes very flat towards the optimum, and hence the forgetful ones gain a larger step size more quickly, but this step size causes it to overstep to opposite sides causing chattering.
+  - The non-forgetful ones still are impacted by the large steps it had taken before, and therefore keeps the step size smaller avoid overstepping.
+
+- This function required a very large number of iterations, due to the very steep nature of the function, which RMSProp cant perform well in, so needed large iterations to see behaviour.
+*** Function 2
+Figs \ref{fig:rmsf1y} , \ref{fig:rmsf1c}, \ref{fig:rmsf1s} shows similar plots for function 2.
+
+- Among alpha=4, the beta=0.98 jumped further into the x1 dimension in the first iteration simply because the beta acts simply as a weight on the current gradient.
+- Both alpha=100 shoot off, beta=0.98 has larger chattering, but it decreases faster due to beta being large and remembering previous magnitudes, and the fact that it started with larger steps.
+  - The lower beta has trouble with the chattering, and the chattering doesnt reduce due to forgetting that it the large steps its taking, and therefore increasing step size.
+
+- Worth noting had to drastically change alpha value between function 1 and 2.
+
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:rmsf1y}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rmsf1y.png}}
+\captionbox{\label{fig:rmsf1c}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rmsf1c.png}}\\[2ex]
+\end{figure}
+\clearpage
+#+end_export
+
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:hbf1y}}{\includegraphics[width=\figwidth\textwidth]{images_week4/hbf1y.png}}
+\captionbox{\label{fig:hbf1c}}{\includegraphics[width=\figwidth\textwidth]{images_week4/hbf1c.png}}\\[2ex]
+\captionbox{\label{fig:rmsf1s}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rmsf1s.png}}
+\captionbox{\label{fig:rmsf2y}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rmsf2y.png}}\\[2ex]
+\captionbox{\label{fig:rmsf2c}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rmsf2c.png}}
+\captionbox{\label{fig:rmsf2s}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rmsf2s.png}}\\[2ex]
+\end{figure}
+\clearpage
+#+end_export
 *** Code :noexport:
-
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-a = np.array([1,2,3,4])
-print(a[:-1])
-res = np.array([])
-res = np.stack((a, a, a))
-print(res)
-#+end_src
-
-#+RESULTS:
-: [1 2 3]
-: [[1 2 3 4]
-:  [1 2 3 4]
-:  [1 2 3 4]]
-
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-print(RMSProp.all_parameters)
-#+end_src
-
-#+RESULTS:
-: ('x0', 'f', 'alpha0', 'beta', 'eps', 'iters')
 **** f1
-
-#+begin_src python :results none :exports none :tangle ./Week4Src.py
-# outputs = RMSProp.set_parameters(
-#     x0= [0, 0],
-#     f=f1,
-#     iters=10,
-#     alpha0=[0.05, 0.5],
-#     beta=[0.2, 0.98],
-#     eps=0.0001).run()
-
-outputs = RMSProp.set_parameters(
-    x0= [0, 0],
+#+begin_src python :results none :exports none :tangle ./Week4Src.py 
+iters = 5000
+o1 = RMSProp.set_parameters(
+    x0=[3, -20],
     f=f1,
-    iters=10,
-    alpha0=0.05,
-    beta=0.98,
+    iters=iters,
+    alpha0=[0.01],
+    beta=[0.6, 0.96],
     eps=0.0001).run()
+o2 = RMSProp.set_parameters(
+    x0=[3, -20],
+    f=f1,
+    iters=iters,
+    alpha0=1.8,
+    beta=[0.99, 0.94, 0.6],
+    eps=0.0001).run()
+o3 = o1 + o2
+# o3 = o2
 #+end_src
 
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-ploty(outputs).semilogy()
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rmsf1y.png
+ploty(copy.deepcopy(o3)).semilogy()
 #+end_src
 
 #+RESULTS:
 :RESULTS:
 : []
-[[file:./.ob-jupyter/5d1b5cea5692c3e2d513a3632cdc560e874ff615.png]]
+[[file:./images_week4/rmsf1y.png]]
 :END:
 
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-l = np.linspace(-3, 19, 40)
-l2 = np.linspace(-30, 30, 40)
-plot_contour(outputs, l, l2, log=True)
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rmsf1c.png
+x = np.linspace(-3, 150, 300)
+y = np.linspace(-30, 30, 300)
+plot_contour(copy.deepcopy(o3), x, y, log=True)
+#+end_src
+
+#+RESULTS:
+[[file:./images_week4/rmsf1c.png]]
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rmsf1s.png
+plot_step_size(copy.deepcopy(o3))
+#+end_src
+
+#+RESULTS:
+[[file:./images_week4/rmsf1s.png]]
+
+**** f2
+#+begin_src python :results none :exports none :tangle ./Week4Src.py
+iters = 50
+f = f2
+x0 = [15, -40]
+o1 = RMSProp.set_parameters(
+    x0=x0,
+    f=f,
+    iters=iters,
+    alpha0=[4, 100],
+    beta=[0.98, 0.68],
+    eps=0.0001).run()
+o3 = o1
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rmsf2y.png
+ploty(copy.deepcopy(o3))
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-#+begin_example
-RMSProp
-[[  0.           0.        ]
- [437.4          4.5       ]
- [437.04644661   4.85354784]
- [436.79549538   5.09442879]
- [436.58971928   5.28674577]
- [436.41072151   5.45045503]
- [436.24989807   5.59476707]
- [436.10241747   5.72481311]
- [435.96525063   5.84379305]
- [435.83635221   5.95385922]
- [435.7142652    6.05654033]]
-#+end_example
-[[file:./.ob-jupyter/cfc7768f959dff967830e8d53aba75dd5a5a9038.png]]
+: <AxesSubplot:title={'center':'$f_2(x_{1},x_{2}) = 5 \\left|{x_{2} - 9}\\right| + \\max\\left(0, x_{1} - 9\\right)$ \n RMSProp: eps=0.0001 x0=[ 15 -40] iters=50\n'}, xlabel='$i$', ylabel='$f_2$'>
+[[file:./images_week4/rmsf2y.png]]
 :END:
-**** f2
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-RMSProp.set_parameters(
-    x0=[20, 20],
-    f=f2,
-    iters=10,
-    alpha0=[0.8, 0.05],
-    beta=[0.2, 0.98],
-    eps=0.0001)
-outputs = RMSProp.run()
-ploty(outputs)
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rmsf2c.png
+x = np.linspace(-50, 18, 300)
+y = np.linspace(-200, 200, 300)
+plot_contour(copy.deepcopy(o3), x, y)
 #+end_src
+
+#+RESULTS:
+[[file:./images_week4/rmsf2c.png]]
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rmsf2s.png
+plot_step_size(copy.deepcopy(o3))
+#+end_src
+
+#+RESULTS:
+[[file:./images_week4/rmsf2s.png]]
 
 ** (ii) $\alpha$ and $\beta$ in Heavy Ball
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-print(HeavyBall.all_parameters)
-#+end_src
+*** Function 1
+Figs \ref{fig:hbf1y} , \ref{fig:hbf1c}, \ref{fig:hbf1s} shows plots for Heavy Ball Function 1.
+- Heavy ball extremely sensitive to alpha for this steep function, especially with high beta.
+  - High beta causes it to maintain  the momentum, and the initial steepness of the step will cause it to have a lot of momentum.
+  - Even for smaller alphas, a high beta will still cause it to go back and forth a lot.
 
-#+RESULTS:
-: ('x0', 'f', 'alpha', 'beta', 'iters')
+  - Smaller betas are better suited for the rapidly changing gradients where the optimum lies in this case.
+    - Smaller beta will ditch the preceding momentums that the algorithm has gathered for more suitable step sizes closer to the optimum.
+  - Alpha=0.001 beta=0.8 demonstartes the nice behavoiur.
+  - Smaller betas, will cause constant step size behaviour.
+*** Function 2
+Figs \ref{fig:hbf2y} , \ref{fig:hbf2c}, \ref{fig:hbf2s} shows same for function 1.
 
+- Smaller betas tend to work better here, to discard momentum.
+  - For this somewhat quadratic-like function, consant step size-like betas seems to work well.
+  - Larger alphas cant really settle at the minimum, chattering happens even with alpha=0.5, due to the kink, it can never quite sit still in the kink to accumulate the low gradient momentum.
+    - Same with small alpha and large beta, the momentum will cause it to jump out the the flat region a lot, and cause it to keep further accumulating momentum.
+
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:hbf1s}}{\includegraphics[width=\figwidth\textwidth]{images_week4/hbf1s.png}}
+\captionbox{\label{fig:hbf2y}}{\includegraphics[width=\figwidth\textwidth]{images_week4/hbf2y.png}}\\[2ex]
+\end{figure}
+\clearpage
+#+end_export
+
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:hbf2c}}{\includegraphics[width=\figwidth\textwidth]{images_week4/hbf2c.png}}
+\captionbox{\label{fig:hbf2s}}{\includegraphics[width=\figwidth\textwidth]{images_week4/hbf2s.png}}\\[2ex]
+\captionbox{\label{fig:af1y}}{\includegraphics[width=\figwidth\textwidth]{images_week4/af1y.png}}
+\captionbox{\label{fig:af1c}}{\includegraphics[width=\figwidth\textwidth]{images_week4/af1c.png}}\\[2ex]
+\captionbox{\label{fig:af1s}}{\includegraphics[width=\figwidth\textwidth]{images_week4/af1s.png}}
+\captionbox{\label{fig:af2y}}{\includegraphics[width=\figwidth\textwidth]{images_week4/af2y.png}}\\[2ex]
+\end{figure}
+\clearpage
+#+end_export
+
+*** Code :noexport:
 **** f1
-
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-outputs = HeavyBall.set_parameters(
-    x0= [0, 0],
+#+begin_src python :results none :exports none :tangle ./Week4Src.py 
+iters = 60
+o1 = HeavyBall.set_parameters(
+    x0=[3, -20],
     f=f1,
-    iters=50,
-    alpha=[0.0001,0.00001],
-    beta=[0.98, 0.8, 0.4]).run()
-v2 = HeavyBall.set_parameters(
-    x0= [0, 0],
-    f=f1,
-    iters=50,
-    alpha=[0.0001,0.00001],
-    beta=[0.98, 0.8, 0.4]).run()
+    iters=iters,
+    alpha=[0.0005, 0.001],
+    beta=[0.5, 0.8, 0.97]).run()
+o3 = o1
 #+end_src
 
-#+RESULTS:
-
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-ploty(outputs).semilogy()
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/hbf1y.png
+ploty(copy.deepcopy(o3)).semilogy()
 #+end_src
 
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/hbf1c.png
+x = np.linspace(-3, 20, 300)
+y = np.linspace(-30, 30, 300)
+plot_contour(copy.deepcopy(o3), x, y, log=True)
 #+end_src
 
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-plot_contour(v1+v2, l, l2, log=True)
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/hbf1s.png
+plot_step_size(copy.deepcopy(o3))
 #+end_src
 
 **** f2
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-outputs = HeavyBall.set_parameters(
-    x0= [0, 0],
+#+begin_src python :results none :exports none :tangle ./Week4Src.py
+iters = 60
+o1 = HeavyBall.set_parameters(
+    x0=[80, -175],
     f=f2,
-    iters=20,
-    alpha=[0.1, 0.8],
-    beta=[0.8, 0.4]).run()
-ploty(outputs)
+    iters=iters,
+    alpha=[1, 10],
+    beta=[0.5, 0.8, 0.97]).run()
+o3 = o1
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/hbf2y.png
+ploty(copy.deepcopy(o3))
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/hbf2c.png
+x = np.linspace(-1000, 100, 300)
+y = np.linspace(-200, 200, 300)
+plot_contour(copy.deepcopy(o3), x, y)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/hbf2s.png
+plot_step_size(copy.deepcopy(o3))
 #+end_src
 
 ** (iii) $\alpha$, $\beta_1$ and $\beta_2$ in Adam
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-print(Adam.all_parameters)
-#+end_src
+*** Function 1
+Figs \ref{fig:af1y} , \ref{fig:af1c}, \ref{fig:af1s} shows plots for Adam Function 1.
 
-#+RESULTS:
-: ('x0', 'f', 'eps', 'beta1', 'beta2', 'alpha', 'iters')
+- Adam allows to crank up the alpha value but still cause it to converge nicely (beta1=0.8, beta2=0.98, alpha=6)
+  - The RMS bit regulates the explosive steps.
+- The momentum allows it to keep moving in the rapidly decreasing areas.
+- beta1 is heavy ball bit, beta2 is rms bit.
+  
+- Low Heavy ball and High RMS with Low alpha doest let it move anywhere
+  - Whereas the same onfig with but higher alpha steadily goes towards optimum
+    - (beta1=.8 beta2=.99 alpha=.8)
+  - Medium/Low Heavy Ball and High RMS could be a "steadiness".
+    - High RMS meaning, the larger the gradients the slower it goes.
+    - Medium Heavy Ball means its not going to overshoot the flat bits.
+      - We can see same config with high Heavy ball (beta1=.99 beta2=.99 alpha=.8) it overshoots.
+    - Low RMS is not bad too, but it still overshoots a bit due to not slowing down when it reaches low parts.
+      - b1=0.8,b2=0.8,a=0.8
+    - Low RMS and High momentum overshoots quite a lot
+      - b1=0.99,b2=0.8,a=0.8
 
+- "Steadiness" works well for rapidly changing slopes.
+
+*** Function 2
+Figs \ref{fig:af2y} , \ref{fig:af2c}, \ref{fig:af2s} shows same for Function 2.
+
+- Alpha can range a large amount and still give quite good performance depending on betas.
+- Comparing
+  - b1=0.7, b2=0.7, a=100
+  - b1=0.9, b2=0.7, a=100
+  - Increased heavy ball influences causes it average out the chattering caused by the massive step size.
+  - Then looking at b1=0.9, b2=0.98, a=100, the rms bit causes it to stop the chattering quite quickly.
+
+- The lower alphas are ideally behaved.
+
+- Betas can caputre a behavoiur acoording to characteristics of the slopes.
+  - Allowing heavy cranking of alpha.
+    
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:af2c}}{\includegraphics[width=\figwidth\textwidth]{images_week4/af2c.png}}
+\captionbox{\label{fig:af2s}}{\includegraphics[width=\figwidth\textwidth]{images_week4/af2s.png}}\\[2ex]
+\captionbox{\label{fig:r1y}}{\includegraphics[width=\figwidth\textwidth]{images_week4/r1y.png}}
+\captionbox{\label{fig:r1p}}{\includegraphics[width=\figwidth\textwidth]{images_week4/r1p.png}}\\[2ex]
+\captionbox{\label{fig:r1s}}{\includegraphics[width=\figwidth\textwidth]{images_week4/r1s.png}}
+\captionbox{\label{fig:rp1y}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rp1y.png}}
+\end{figure}
+\clearpage
+#+end_export
+
+*** Code :noexport:
 **** f1
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-outputs = Adam.set_parameters(
-    x0= [0, 0],
+#+begin_src python :results none :exports none :tangle ./Week4Src.py 
+iters = 60
+o1 = Adam.set_parameters(
+    x0=[3, -20],
     f=f1,
-    iters=200,
-    alpha=10,
-    beta1=[0.90, 0.98],
-    beta2=[0.9, 0.98],
+    iters=iters,
+    alpha=[0.1, 0.8],
+    beta1=[0.99, 0.8],
+    beta2=[0.99, 0.8],
     eps=1e-5).run()
-ploty(outputs).semilogy()
+o2 = Adam.set_parameters(
+    x0=[3, -20],
+    f=f1,
+    iters=iters,
+    alpha=[6],
+    beta1=[0.8],
+    beta2=[0.98],
+    eps=1e-5).run()
+o3 = o1 + o2
 #+end_src
 
-**** f2
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-outputs = Adam.set_parameters(
-    x0= [0, 0],
-    f=f2,
-    iters=200,
-    alpha=1,
-    beta1=[0.98, 0.8, 0.3],
-    beta2=[0.98, 0.78],
-    eps=1e-5).run()
-ploty(outputs)
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/af1y.png
+ploty(copy.deepcopy(o3)).semilogy()
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-: <AxesSubplot:title={'center':'Adam: x0=[0 0] iters=200 alpha=1 eps=1e-05\n'}, xlabel='$i$', ylabel='$f_2$'>
-[[file:./.ob-jupyter/b8c603db78e3ff71a6299b8a5939054b9379dae3.png]]0.98
+: []
+[[file:./images_week4/af1y.png]]
 :END:
 
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/af1c.png
+x = np.linspace(-3, 20, 300)
+y = np.linspace(-30, 30, 300)
+plot_contour(copy.deepcopy(o3), x, y, log=True)
+#+end_src
+
+#+RESULTS:
+[[file:./images_week4/af1c.png]]
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/af1s.png
+plot_step_size(copy.deepcopy(o3))
+#+end_src
+
+#+RESULTS:
+[[file:./images_week4/af1s.png]]
+
+**** f2
+#+begin_src python :results none :exports none :tangle ./Week4Src.py
+iters = 60
+o1 = Adam.set_parameters(
+    x0=[80, -70],
+    f=f2,
+    iters=iters,
+    alpha=[10, 100],
+    # beta1=[0.99, 0.8],
+    # beta2=[0.99, 0.8],
+    beta1=[0.7, 0.9],
+    beta2=[0.98, 0.7],
+    eps=1e-5).run()
+o3 = o1
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/af2y.png
+ploty(copy.deepcopy(o3))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: <AxesSubplot:title={'center':'$f_2(x_{1},x_{2}) = 5 \\left|{x_{2} - 9}\\right| + \\max\\left(0, x_{1} - 9\\right)$ \n Adam: eps=1e-05 x0=[ 80 -70] iters=60\n'}, xlabel='$i$', ylabel='$f_2$'>
+[[file:./images_week4/af2y.png]]
+:END:
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/af2c.png
+x = np.linspace(-800, 100, 300)
+y = np.linspace(-80, 80, 300)
+plot_contour(copy.deepcopy(o3), x, y)
+#+end_src
+
+#+RESULTS:
+[[file:./images_week4/af2c.png]]
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/af2s.png
+plot_step_size(copy.deepcopy(o3))
+#+end_src
+
+#+RESULTS:
+[[file:./images_week4/af2s.png]]
+
 * (c) Optimising ReLu - $Max(0, x)$
+- (i) Initial Condition $x = -1$
+  - Figs \ref{fig:r1y} , \ref{fig:r1p}, \ref{fig:r1s}
+  - Start at no gradient, therefore doesnt move anywhere.
+- (ii) Initial Condition $x = +1$
+  - Figs \ref{fig:rp1y} , \ref{fig:rp1pa}, \ref{fig:rp1pr},  \ref{fig:rp1phb}, \ref{fig:rp1s}
+  - All move towards 0, adam stick close to slope, rms and heavy ball jump over, heavy ball keeps going cause of momentum, rms just stays there because gradient is zero.
+- (iii) Initial Condition $x =+100$
+  - Figs \ref{fig:rp100y} , \ref{fig:rp100pa}, \ref{fig:rp100pr},  \ref{fig:rp100phb}, \ref{fig:rp100s}
+  - Adam doesnt makes it least down the slope, heavy ball makes it down the most due to momentum, rms also does well although not as good as HB
+  - RMS step size slows down over time.
+  - Adam has constant step size behaviour
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:rp1pa}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rp1pa.png}}\\[2ex]
+\captionbox{\label{fig:rp1pr}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rp1pr.png}}
+\captionbox{\label{fig:rp1phb}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rp1phb.png}}\\[2ex]
+\captionbox{\label{fig:rp1s}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rp1s.png}}
+\end{figure}
+\clearpage
+
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:rp100y}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rp100y.png}}
+\captionbox{\label{fig:rp100pa}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rp100pa.png}}\\[2ex]
+\captionbox{\label{fig:rp100pr}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rp100pr.png}}
+\captionbox{\label{fig:rp100phb}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rp100phb.png}}\\[2ex]
+\captionbox{\label{fig:rp100s}}{\includegraphics[width=\figwidth\textwidth]{images_week4/rp100s.png}}
+\end{figure}
+\clearpage
+#+end_export
+
+*** Code :noexport:
 #+begin_src python :results none :exports none :tangle ./Week4Src.py
 x = symbols('x', real=True)
 sym_f_relu = Max(0, x)
 f_relu = OptimisableFunction(sym_f_relu, [x], "reLu")
 #+end_src
 
-** (i) Initial Condition $x = -1$
 *** Code :noexport:
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
+#+begin_src python :results none :exports none :tangle ./Week4Src.py
 x_init = -1
 
 adam_o = Adam.set_parameters(
@@ -428,54 +667,36 @@ rmsprop_o = RMSProp.set_parameters(
     alpha0=[1],
     beta=[0.98],
     eps=0.0001).run()
-outputs = adam_o + heavyball_o + rmsprop_o
-
-# print(outputs)
-ploty(outputs)
+o3 = adam_o + heavyball_o + rmsprop_o
 #+end_src
 
-** (ii) Initial Condition $x = +1$
-*** Code :noexport:
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-x_init = 1
-
-adam_o = Adam.set_parameters(
-    x0=[x_init],
-    f=f_relu,
-    iters=10,
-    alpha=1,
-    beta1=[0.98],
-    beta2=[0.98],
-    eps=1e-5).run()
-heavyball_o = HeavyBall.set_parameters(
-    x0=[x_init],
-    f=f_relu,
-    iters=10,
-    alpha=[1],
-    beta=[0.98]).run()
-rmsprop_o = RMSProp.set_parameters(
-    x0=[x_init],
-    f=f_relu,
-    iters=10,
-    alpha0=[1],
-    beta=[0.98],
-    eps=0.0001).run()
-outputs = adam_o + heavyball_o + rmsprop_o
-
-# print(outputs)
-ploty(outputs)
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/r1y.png
+ploty(copy.deepcopy(o3))
 #+end_src
 
-** (iii) Initial Condition $x =+100$
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/r1p.png
+x = np.linspace(-4, 4, 50)
+# plot_path(copy.deepcopy(o3), x)
+plot_path(copy.deepcopy(o3), x)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/r1s.png
+plot_step_size(copy.deepcopy(o3))
+#+end_src
+
+
 *** Code :noexport:
-#+begin_src python :results replace :exports none :tangle ./Week4Src.py
-x_init = 100
-iters = 100
+
+#+begin_src python :results none :exports none :tangle ./Week4Src.py
+x_init = +1
+
+iters=8
+
 adam_o = Adam.set_parameters(
     x0=[x_init],
     f=f_relu,
     iters=iters,
-    alpha=1,
+    alpha=0.2,
     beta1=[0.98],
     beta2=[0.98],
     eps=1e-5).run()
@@ -483,23 +704,130 @@ heavyball_o = HeavyBall.set_parameters(
     x0=[x_init],
     f=f_relu,
     iters=iters,
-    alpha=[1],
+    alpha=[0.2],
     beta=[0.98]).run()
 rmsprop_o = RMSProp.set_parameters(
     x0=[x_init],
     f=f_relu,
     iters=iters,
-    alpha0=[1],
+    alpha0=[0.2],
     beta=[0.98],
     eps=0.0001).run()
-outputs = adam_o + heavyball_o + rmsprop_o
+o3 = adam_o + heavyball_o + rmsprop_o
+#+end_src
 
-# print(outputs)
-ploty(outputs)
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rp1y.png
+ploty(copy.deepcopy(o3))
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rp1pa.png
+x = np.linspace(-4, 4, 50)
+plot_path(copy.deepcopy(adam_o), x)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rp1pr.png
+x = np.linspace(-4, 4, 50)
+plot_path(copy.deepcopy(rmsprop_o), x)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rp1phb.png
+x = np.linspace(-4, 4, 50)
+plot_path(copy.deepcopy(heavyball_o), x)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rp1s.png
+plot_step_size(copy.deepcopy(o3))
 #+end_src
 
 #+RESULTS:
-:RESULTS:
-: <AxesSubplot:title={'center':'Heavy Ball: iters=100 alpha=1 x0=[100] beta=0.98\nRMSProp: beta=0.98 iters=100 alpha0=1 x0=[100] eps=0.0001\nAdam: beta1=0.98 beta2=0.98 iters=100 alpha=1 x0=[100] eps=1e-05\n'}, xlabel='$i$', ylabel='$reLu$'>
-[[file:./.ob-jupyter/0f7e4fa67bccbb61b41b57180de91ab5688d6eb8.png]]
-:END:
+[[file:./images_week4/rp1s.png]]
+
+
+*** Code :noexport:
+#+begin_src python :results none :exports none :tangle ./Week4Src.py
+x_init = +100
+
+adam_o = Adam.set_parameters(
+    x0=[x_init],
+    f=f_relu,
+    iters=10,
+    alpha=1,
+    beta1=[0.98],
+    beta2=[0.98],
+    eps=1e-5).run()
+heavyball_o = HeavyBall.set_parameters(
+    x0=[x_init],
+    f=f_relu,
+    iters=10,
+    alpha=[1],
+    beta=[0.98]).run()
+rmsprop_o = RMSProp.set_parameters(
+    x0=[x_init],
+    f=f_relu,
+    iters=10,
+    alpha0=[1],
+    beta=[0.98],
+    eps=0.0001).run()
+o3 = adam_o + heavyball_o + rmsprop_o
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rp100y.png
+ploty(copy.deepcopy(o3))
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rp100pa.png
+x = np.linspace(-4, 110, 50)
+plot_path(copy.deepcopy(adam_o), x)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rp100pr.png
+x = np.linspace(-4, 110, 50)
+plot_path(copy.deepcopy(rmsprop_o), x)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rp100phb.png
+x = np.linspace(-4, 110, 50)
+plot_path(copy.deepcopy(heavyball_o), x)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week4Src.py :file ./images_week4/rp100s.png
+plot_step_size(copy.deepcopy(o3))
+#+end_src
+
+* Appendix
+** Code Listing
+#+begin_export latex
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\lstinputlisting[language=Python]{Week4Src.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/Algorithms.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/DataType.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/Function.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/Plotting.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/__init__.py}
+%\inputminted{Python}{Week2Src.py}
+#+end_export
