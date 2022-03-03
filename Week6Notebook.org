@@ -1,0 +1,163 @@
+#+AUTHOR:Ernests Kuznecovs - 17332791 - kuznecoe@tcd.ie
+#+Date:2nd March
+#+Title:Optimisation Algorithms - Week 6 Assignment
+
+#+begin_export latex
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+#+end_export
+* Preamble :noexport:
+#+PROPERTY: header-args:python :session a2
+#+PROPERTY: header-args:python+ :async yes
+#+PROPERTY: header-args:python+ :eval never-export
+#+PROPERTY: header-args:elisp :eval never-export
+#+EXCLUDE_TAGS: noexport
+
+#+LaTeX_HEADER: \usepackage{listings}
+#+LaTeX_HEADER: \usepackage{xcolor}
+#+LaTeX_HEADER: \usepackage{minted}
+#+LaTeX_HEADER: \usepackage[a4paper, total={6.7in, 10.5in}]{geometry}
+
+#+LaTeX_HEADER: \usepackage{caption}
+#+LaTeX_HEADER: \newcommand\figwidth{0.48}
+
+#+begin_src elisp :results none :exports none
+(use-package jupyter
+  :config
+  (org-babel-do-load-languages 'org-babel-load-languages '((emacs-lisp . t)
+							   (python . t)
+							   (jupyter . t)))
+  (org-babel-jupyter-override-src-block "python")
+  (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images)
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((emacs-lisp . t)
+     (python . t)
+     (jupyter . t))))
+#+end_src
+
+#+begin_src elisp :results none :exports none
+(setq-local org-image-actual-width '(512))
+(setq-local org-confirm-babel-evaluate nil)
+(setq-local org-src-preserve-indentation 't)
+
+(setq org-latex-listings t)
+(setq org-latex-prefer-user-labels t)
+#+end_src
+
+* Python Imports :noexport:
+#+begin_src python :results none :exports none :tangle ./Week6Src.py
+import matplotlib as mpl
+mpl.rcParams['figure.dpi'] = 200
+mpl.rcParams['figure.facecolor'] = '1'
+import matplotlib.pyplot as plt
+plt.style.use('seaborn-white')
+import copy
+import numpy as np
+#+end_src
+
+#+begin_src python :results none :exports none :tangle ./Week6Src.py
+# import OptimisationAlgorithmToolkit
+from OptimisationAlgorithmToolkit.Function import OptimisableFunction
+from OptimisationAlgorithmToolkit import Algorithms
+from OptimisationAlgorithmToolkit import DataType
+from OptimisationAlgorithmToolkit import Plotting
+import importlib
+importlib.reload(Algorithms)
+importlib.reload(DataType)
+importlib.reload(Plotting)
+from OptimisationAlgorithmToolkit.Algorithms import Polyak, Adam, HeavyBall, RMSProp, Adagrad, ConstantStep
+from OptimisationAlgorithmToolkit.DataType import create_labels, get_titles
+from OptimisationAlgorithmToolkit.Plotting import ploty, plot_contour, plot_path, plot_step_size
+#+end_src
+* Obtaining Functions :noexport:
+
+#+begin_src python :results none :exports none :tangle ./Week6Src.py
+from sympy import symbols, Max, Abs
+x1, x2 = symbols('x1 x2', real=True)
+sym_f1 = 3 * (x1-9)**4 + 5 * (x2-9)**2
+f1 = OptimisableFunction(sym_f1, [x1, x2], "f_1")
+sym_f2 = Max(x1-9 ,0) + 5 * Abs(x2-9)
+f2 = OptimisableFunction(sym_f2, [x1, x2], "f_2")
+#+end_src
+
+#+begin_src python :results none :exports none :tangle ./Week6Src.py
+import numpy as np
+
+def generate_trainingdata(m=25):
+    return np.array([0,0])+0.25*np.random.randn(m,2)
+
+def f(x, minibatch):
+    # loss function sum_{w in training data} f(x,w)
+    y=0; count=0
+    for w in minibatch:
+        z=x-w-1
+        y=y+min(12*(z[0]**2+z[1]**2), (z[0]+8)**2+(z[1]+10)**2)   
+        count=count+1
+    return y/count
+#+end_src
+
+* (a)
+- While I'm doing the assignment, write my thoughts in a presentable way as I go.
+  - This will probably save time and effort.
+* (b)
+* (c)    
+* Appendix
+** Code Listing
+#+begin_export latex
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\lstinputlisting[language=Python]{Week6Src.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/Algorithms.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/DataType.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/Function.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/Plotting.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/__init__.py}
+%\inputminted{Python}{Week2Src.py}
+#+end_export
