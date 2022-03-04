@@ -7,13 +7,19 @@
 
 import numpy as np
 
+from OptimisationAlgorithmToolkit.Function import FunctionIterator
+
 class OptimisationAlgorithm:
-    def __init__(self, algorithm, algorithm_name):
+    def __init__(self, algorithm, algorithm_name, batched=False):
         self.algorithm = algorithm
         self.algorithm_name = algorithm_name
+        self.batched = batched
         
         arguments = algorithm.__code__.co_varnames[:algorithm.__code__.co_argcount]
+        self.mini_batch_parameters = ('b')
         self.all_parameters = arguments
+        if (self.batched):
+            self.all_parameters += self.mini_batch_parameters
         self.standard_parameters = ("x0", "f", "iters")
         self.hyperparameters = list(filter(lambda arg: arg not in self.standard_parameters, arguments))
 
@@ -42,6 +48,8 @@ class OptimisationAlgorithm:
     def __make_input(self):
         kwargs = self.parameter_values.copy()
         expected_vector = { "x0" }
+        if self.batched:
+            expected_vector.add("b")
         for key, value in kwargs.items():
             if key in expected_vector:
                 value = np.array(value)
@@ -78,13 +86,26 @@ def polyak(x0, f, f_star, eps, iters):
 Polyak = OptimisationAlgorithm(algorithm=polyak,
                                algorithm_name="Polyak")
 
-def constant_step(x0, alpha, f, iters):
-    dfs = f.partial_derivatives ; f = f.function ; x = x0 ; X = [x] ; Y = [f(*x)]
+# def constant_step(x0, alpha, f, iters):
+#     f = f.function ; x = x0 ; X = [x] ; Y = [f(*x)]
     
-    for _ in range(iters):
+#     for _ in range(iters):
+#         step = alpha * np.array([df(*x) for df in dfs])
+#         x = x - step
+        
+#         X += [x] ; Y += [f(*x)]
+#     return X, Y
+
+
+
+def constant_step(x0, alpha, f, iters, b=None):
+    fi = FunctionIterator(f, b, iters)
+    f = f.function ; x = x0 ; X = [x] ; Y = [f(*x)]
+    
+    for fN, dfs in fi:
         step = alpha * np.array([df(*x) for df in dfs])
         x = x - step
-        
+    
         X += [x] ; Y += [f(*x)]
     return X, Y
 

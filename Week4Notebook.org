@@ -609,7 +609,7 @@ plot_step_size(copy.deepcopy(o3))
 - (ii) Initial Condition $x = +1$
   - Figs \ref{fig:rp1y} , \ref{fig:rp1pa}, \ref{fig:rp1pr},  \ref{fig:rp1phb}, \ref{fig:rp1s}
   - All move towards 0, adam stick close to slope, rms and heavy ball jump over, heavy ball keeps going cause of momentum, rms just stays there because gradient is zero.
-- (iii) Initial Condition $x =+100$
+) Initial Condition $x =+100$
   - Figs \ref{fig:rp100y} , \ref{fig:rp100pa}, \ref{fig:rp100pr},  \ref{fig:rp100phb}, \ref{fig:rp100s}
   - Adam doesnt makes it least down the slope, heavy ball makes it down the most due to momentum, rms also does well although not as good as HB
   - RMS step size slows down over time.

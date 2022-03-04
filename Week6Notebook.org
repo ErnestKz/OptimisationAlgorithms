@@ -80,28 +80,22 @@ import numpy as np
 
 #+begin_src python :results none :exports none :tangle ./Week6Src.py
 # import OptimisationAlgorithmToolkit
-from OptimisationAlgorithmToolkit.Function import OptimisableFunction
+
 from OptimisationAlgorithmToolkit import Algorithms
 from OptimisationAlgorithmToolkit import DataType
 from OptimisationAlgorithmToolkit import Plotting
+from OptimisationAlgorithmToolkit import Function
 import importlib
+importlib.reload(Function)
 importlib.reload(Algorithms)
 importlib.reload(DataType)
 importlib.reload(Plotting)
-from OptimisationAlgorithmToolkit.Algorithms import Polyak, Adam, HeavyBall, RMSProp, Adagrad, ConstantStep
+from OptimisationAlgorithmToolkit.Function import BatchedFunction, SymbolicFunction
+from OptimisationAlgorithmToolkit.Algorithms import ConstantStep
 from OptimisationAlgorithmToolkit.DataType import create_labels, get_titles
 from OptimisationAlgorithmToolkit.Plotting import ploty, plot_contour, plot_path, plot_step_size
 #+end_src
 * Obtaining Functions :noexport:
-
-#+begin_src python :results none :exports none :tangle ./Week6Src.py
-from sympy import symbols, Max, Abs
-x1, x2 = symbols('x1 x2', real=True)
-sym_f1 = 3 * (x1-9)**4 + 5 * (x2-9)**2
-f1 = OptimisableFunction(sym_f1, [x1, x2], "f_1")
-sym_f2 = Max(x1-9 ,0) + 5 * Abs(x2-9)
-f2 = OptimisableFunction(sym_f2, [x1, x2], "f_2")
-#+end_src
 
 #+begin_src python :results none :exports none :tangle ./Week6Src.py
 import numpy as np
@@ -117,13 +111,394 @@ def f(x, minibatch):
         y=y+min(12*(z[0]**2+z[1]**2), (z[0]+8)**2+(z[1]+10)**2)   
         count=count+1
     return y/count
-#+end_src
 
-* (a)
+M = generate_trainingdata()
+#+end_src
+*** Code Description
+
+- generate training points $T$ with genereate_trainingdata().
+- loss function $f(x, N)$ has the form:
+  - $f(x, N) = \sum\limits_{w \in N} loss(x,w)$
+  - $x$ is a vector with two elements, the parameters that minimise the function f.
+  - $N$ is a subset/mini-batch of the training data over which to calculate loss.
+    - $N$ is a set of indices that index into the training set.
+      - $N$ has b elements, where b is the batch size.
+      - Each iteration we pick b random indices out m, and this will be $N$
+      - The loss function is calculted using these indices from $N$
+      
+    - Wireframe and countour plot it.
+      
+
+- Lets understand loss functions of nueral nets and regression.
+
+*** Linear Regression/ Least Squares
+- Training Data: $(x^{(i)}, y^{(i)}), i=1,...,m$
+  - $y^{(i)}$ is real valued.
+- Cost Function: $J(\theta) = \frac{1}{m} \sum\limits_{i=1}^{m}(\theta^Tx^{(i)} - y^{(i)})^2$
+  - Cost function is quadratic in $\theta$ so expect nice convergence.
+  - We are optimising $\theta$, number of dimensions depends on number of features per datapoint.
+  - To add noise:
+    - $y^{(i)}=\theta^{T} x^{(i)} + n^{(i)}$
+    - $n^{(i)}$ normal with mean 0, std dev 0.1
+
+  - Perhaps would be nice to write this out.
+    - For some set of points
+
+  - lets say 2 points, with 2 features
+    - (x1 x2 y) (x1 x2 y) (
+    - $J(\theta_1, \theta_2)=\frac{1}{2}* ((\theta_1 x_1^{(1)} + \theta_2 x_2^{(1)} - y^{(1)}})^{2} +
+      (\theta_1 x_1^{(2)} + \theta_2 x_2^{(2)} - y^{(2)}})^2)$
+    - $(\theta_1 x_1^{(1)} + \theta_2 x_2^{(1)} - y^{(1)}})^{2}=$ $-\theta_1 x_1^{(1)} y^{(1)} - \theta_2 x_2^{(1)} y^{(1)} + y^{(1)}^2 + \hdots$ 
+
+- Logistic Regression with l2 and l1 regularisation.
+
+*** Neural Networks
+- Network with one hidden layer.
+  
+- $z_1 = f(\theta^{[1]}_{01} x_0 + \theta^{[1]}_{11} x_1 + \hdots + \theta^{[1]}_{n1} x_n)$
+- $z_1 = f(\theta^{[1]}_{02} x_0 + \theta^{[1]}_{12} x_1 + \hdots + \theta^{[1]}_{n2} x_n)$
+- $\hat{y} = g(\theta^{[2]}_1 z_1 + \theta^{[2]}_2 z_2)$
+
+- Each layer has its own vector of thetas.
+  - Typical choice for f and ReLu are Sigmoid.
+  - For g is Sigmoid
+
+
+
 - While I'm doing the assignment, write my thoughts in a presentable way as I go.
   - This will probably save time and effort.
-* (b)
-* (c)    
+* (a) Stochastic Gradient Descent
+** (i) Implementation of SGD
+- Use approximate derivatives $Df_{x_1}(\theta)$ instead of exact derivatives $\frac{\partial f}{\partial x_1} (x)$
+  - $Df_{\theta_i} = \frac{\partial f}{\partial \theta_i} + noise$
+  - For ML we are trying to optimise the function:
+    - $J(\theta) = \frac{1}{m} \sum\limits_{i=1}^m loss(\theta, x^{(i)}, y^{(i)})$
+    - $(x^{(1)}, y^{(1)}), (x^{(2)}, y^{(2)}), \hdots,(x^{(m)}, y^{(m)})$ is our training data.
+    - $loss()$ is a function that measures how well our predictions match the training data.
+      - e.g $loss(\theta, x^{(i)}, y^{(i)}) = (\theta^T x^{(i)} - y^{(i)})$ in linear regression.
+  - Derivatives:
+    - $\frac{\partial J}{\partial \theta_1} (\theta) = \frac{1}{m} \sum\limits_{i=1}^{m} \frac{\partial loss}{\partial \theta_1}(\theta, x^{(i)},y^{(i)}), \frac{\partial J}{\partial \theta_2} (\theta) = \frac{1}{m} \sum\limits_{i=1}^{m} \frac{\partial loss}{\partial \theta_2}(\theta, x^{(i)},y^{(i)})$
+
+    - Pick random sample of b points form training data
+    - Let $N$ be the set of indices.
+    - Then use approx derivatives:
+      - $DJ_{\theta_1} (\theta) = \frac{1}{b} \sum\limits_{i \in N} \frac{\partial loss}{\partial \theta_1}(\theta, x^{(i)},y^{(i)}), DJ_{\theta_2} (\theta) = \frac{1}{b} \sum\limits_{i \in N} \frac{\partial loss}{\partial \theta_2}(\theta, x^{(i)},y^{(i)})$
+	- we give it a new N every approximation, its a set of indices into the dataset.
+	  - for each i in N (i stands for index)
+	- when $b=m$ and $N = \{ 1,2,\hdots,m \}$ we get back exact derivatives.
+
+	- $loss(\theta, x^{(i)}, y^{(i)}) = \frac{1}{2} * (\theta^T x^{(i)} - y^{(i)}})^2$
+	- $\frac{\partial loss}{\partial \theta_k} (\theta, x^{(i)}, y^{(i)}) = (\theta^T x^{(i)} - y^{(i)}})x_k^{(i)}$
+	- $DJ_{\theta_1}(\theta) = \frac{1}{5} \sum\limits_{i \in N} \frac{\partial loss}{\partial \theta_1}(\theta, x^{(i)}, y^{(i)}) = \frac{1}{5} \sum\limits_{i \in N} (\theta^T x^{(i)} - y^{(i)}})x_k^{(1)}$
+	  - and so on for $\theta_2,\hdots$
+
+	- sample with replacement after every update
+	  - need to differentiate a new loss function after every iteration?
+
+#+begin_src python :results none :exports code :tangle ./Week6Src.py
+x = np.array([1, 2]); b = 5; m = len(M); alpha=0.4; iters=50
+for _ in range(iters):
+    N = np.random.choice(np.arange(m), b)
+    fN = lambda x: f(x, minibatch=M[N])
+    DJ = np.array([finite_diff(fN, x, i) for i in range(len(x))])
+    x = x - alpha * DJ
+#+end_src
+
+#+begin_src python :results none :exports code :tangle ./Week6Src.py
+x = np.array([1, 2]); b = 5; m = len(M); alpha=0.4; iters=50
+for _ in range(iters):
+    np.random.shuffle(D)
+    for i in np.arange(0, m, b): # 0 upto m-1, in steps of b. i.e index of each batch start
+        N = np.arange(i, i + b)
+        fN = lambda x: f(x, minibatch=M[N])
+        DJ = np.array([finite_diff(fN, x, i) for i in range(len(x))])
+        x = x - alpha * DJ
+#+end_src
+
+#+begin_src python :results none :exports code :tangle ./Week6Src.py
+f = BatchedFunction(f, M, b=5, iters=50) ; fi = iter(f) ; f = f.function;  
+for fN, dfs in fi:
+    step = alpha * np.array([df(*x) for df in dfs])
+    x = x - step
+    
+    X += [x] ; Y += [f(*x)]
+    return X, Y
+#+end_src
+
+#+begin_src python :results replace :exports code :tangle ./Week6Src.py
+np.arange(0, 10, 10)
+np.arange(0, 0+10)
+#+end_src
+
+#+RESULTS:
+: array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+
+** (ii) Plotting Loss Function to Optimise
+Fig \ref{fig:contour} is the contour plot. Fig \ref{fig:wireframe} is the wireframe plot.
+
+The range of values chosen are -40 and 25. This is because for larger range it is strongly convex, but when zoomed in, there is an interesting dip to the side of the function, which can be considered as a local minimum.
+Also the function increses rapidly beyond 25 and -40, it's already at $10^4$, although perhaps it will be interesting starting the optimisation beyond that to see how it behaves.
+
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:contour}}{\includegraphics[width=\figwidth\textwidth]{images_week6/contour.png}}
+\captionbox{\label{fig:wireframe}}{\includegraphics[width=\figwidth\textwidth]{images_week6/wireframe.png}}\\[2ex]
+\end{figure}
+\clearpage
+#+end_export
+
+#+begin_src python :results none :exports none :tangle ./Week6Src.py
+m = len(M) ; b = m ; N = np.arange(b)
+fN = lambda x1, x2: f(np.array([x1, x2]), minibatch=M[N])
+x1s = np.linspace(-40, 25, 200)
+x2s = np.linspace(-40, 20, 200)
+X1, X2 = np.meshgrid(x1s, x2s)
+Z = np.vectorize(fN)(X1, X2)
+#+end_src
+
+#+begin_src python :results none :exports none :tangle ./Week6Src.py 
+from matplotlib.ticker import LogLocator
+from matplotlib import cm
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/contour.png
+plt.contourf(X1, X2, Z,
+             locator=LogLocator(),
+             cmap= plt.get_cmap('gist_earth'))
+plt.xlabel(r'$x_1$')
+plt.ylabel(r'$x_2$')
+plt.title(r'Contour Plot')
+plt.colorbar();
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/wireframe.png
+fig = plt.figure()
+ax = plt.axes(projection='3d')
+# ax.contour3D(X1, X2, Z, 50, cmap='autumn')
+ax.plot_wireframe(X1, X2, Z, cmap=cm.coolwarm, linewidth=0.2)
+ax.view_init(10, 80)
+ax.set_title('Wireframe')
+plt.xlabel(r'$x_1$')
+plt.ylabel(r'$x_2$')
+#+end_src
+
+** (iii) Calculating Derivative of f
+- With Sympy
+  - Can I set it up in such a way that can differentiate with the batchiness of it too?
+
+- finite_diff is defined such that can specify which input parameter to the function we add the perturbation.
+
+#+begin_src python :results replace :exports code :tangle ./Week6Src.py
+def finite_diff(f, x, i, delta=0.0001):
+    d = np.zeros(len(x)) ; d[i] = delta
+    return (f(x) - f(x - d)) / delta
+#+end_src
+
+- We index our dataset $M$ with $N$ and create a closure in the lambda with the batch.
+- Then we can pass the resulting function to the finite difference function.
+
+#+begin_src python :results replace :exports code :tangle ./Week6Src.py
+fN = lambda x: f(x, minibatch=M[N])
+x = np.array([10, 10])
+Dfx1 = finite_diff(fN, x, 0) # w.r.t x1
+Dfx2 = finite_diff(fN, x, 1) # w.r.t x2
+print(Dfx1)
+print(Dfx2)
+#+end_src
+
+#+RESULTS:
+: 33.807431020795775
+: 38.154229460508304
+
+* (b) Optimising f
+** (i) Gradient Descent with Constant Step-Size
+
+A value of alpha of 0.085 is picked such that the gradient descent gets stuck in the local minimum. Perhaps the SGD will demonstrate that it will be able to oercome it.
+
+Fig \ref{fig:gdcy} is gradient decent with constant step plotting y value acorss iteration.
+Fig \ref{fig:gdcc} is gradient decent with constant step on countour plot.
+
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:gdcy}}{\includegraphics[width=\figwidth\textwidth]{images_week6/gdcy.png}}
+\captionbox{\label{fig:gdcc}}{\includegraphics[width=\figwidth\textwidth]{images_week6/gdcc.png}}\\[2ex]
+\end{figure}
+\clearpage
+#+end_export
+
+*** Code :noexport:
+
+#+begin_src python :results none :exports none :tangle ./Week6Src.py
+bf = BatchedFunction(f, M)
+o = ConstantStep.set_parameters(x0 = np.array([3,3]),
+                             alpha = 0.085,
+                             f = bf,
+                             iters=60,
+                             b = len(M)).run()
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/gdcy.png
+ploty(copy.deepcopy(o))
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/gdcc.png
+x1s = np.linspace(-20, 5, 50)
+x2s = np.linspace(-20, 5, 50)
+plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
+** (ii) Mini-Batch Stochastic Gradient Descent
+
+Figs \ref{fig:sgdcc}, \ref{fig:sgdcc2}, \ref{fig:sgdcc3}  shows the effect of varience between runs. It can sometimes escape the local minimum, depending on if it gets the luckly batch of data that forms the function/gradient at critical times.
+We can see that the algorithm can walk around at the local mimimum, and then escape. And we also see that it can get luckly and it gets the lucky batch in a timely manner to avoid the dance at the local minimum and directly step over it. Perhaps a batch causes the slope to increase and allows for the step to hop over.
+In gradient descent, it is stuck chattering.
+
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:sgdcc}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcc.png}}
+\captionbox{\label{fig:sgdcc2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcc2.png}}\\[2ex]
+\captionbox{\label{fig:sgdcc3}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcc3.png}}
+\end{figure}
+\clearpage
+#+end_export
+
+*** Code :noexport:
+
+#+begin_src python :results none :exports none :tangle ./Week6Src.py
+bf = BatchedFunction(f, M)
+o = ConstantStep.set_parameters(x0 = np.array([3, 3]),
+                                alpha = 0.085,
+                                f = bf,
+                                iters=60,
+                                b=[5]).run()
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcy.png
+o = ConstantStep.run()
+ploty(copy.deepcopy(o))
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcc.png
+o = ConstantStep.run()
+x1s = np.linspace(-20, 5, 50)
+x2s = np.linspace(-20, 5, 50)
+plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcc2.png
+o = ConstantStep.run()
+x1s = np.linspace(-20, 5, 50)
+x2s = np.linspace(-20, 5, 50)
+plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcc3.png
+o = ConstantStep.run()
+x1s = np.linspace(-20, 5, 50)
+x2s = np.linspace(-20, 5, 50)
+plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
+#+end_src
+
+** (iii) Varying Mini-Batch Size on SGD
+Figs \ref{fig:sgdccb}, \ref{fig:sgdccb2}, \ref{fig:sgdccb3} shows various runs with various batch sizes. Batch size of 1 almost always escapse the local minimum, batch size 25 (out of 25 data points) never escapes. While batch sizes 5 and 10 sometimes escape.
+
+Could probably plot stats across many runs.
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:sgdccb}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdccb.png}}
+\captionbox{\label{fig:sgdccb2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdccb2.png}}\\[2ex]
+\captionbox{\label{fig:sgdccb3}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdccb3.png}}
+\end{figure}
+\clearpage
+#+end_export
+
+*** Code :noexport:
+#+begin_src python :results none :exports none :tangle ./Week6Src.py
+bf = BatchedFunction(f, M)
+o = ConstantStep.set_parameters(x0 = np.array([3, 3]),
+                                alpha = 0.085,
+                                f = bf,
+                                iters=60,
+                                b=[1, 5, 10, len(M)]).run()
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdccb.png
+o = ConstantStep.run()
+x1s = np.linspace(-20, 5, 50)
+x2s = np.linspace(-20, 5, 50)
+plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
+#+RESULTS:
+[[file:./images_week6/sgdccb.png]]
+
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdccb2.png
+o = ConstantStep.run()
+x1s = np.linspace(-20, 5, 50)
+x2s = np.linspace(-20, 5, 50)
+plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
+#+RESULTS:
+[[file:./images_week6/sgdccb2.png]]
+
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdccb3.png
+o = ConstantStep.run()
+x1s = np.linspace(-20, 5, 50)
+x2s = np.linspace(-20, 5, 50)
+plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
+#+RESULTS:
+[[file:./images_week6/sgdccb3.png]]
+
+** (iv) Varying Step Size on SGD
+Figs \ref{fig:sgdccb}.
+Each alpha has the ability to overcome dips of a range of steepness, the range varied by the batch size.
+Alpha=0.05 doesnt seem like it has a chance to walk out of the local minimum. Whereas alpha=0.085 sometimes does, and alpha=0.1 almost always does. Alpha=0.5 copmletely jumps over so the dip is not even relevant for it.
+Although not sure about the analogy of the range being the variance induced by batch size, as we saw batch size of 1 make it out almost always. Perhpas the degree of variance in the behavour really depends on the nature of the static component of the derivative fo the function.
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:sgdcca}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcca.png}}
+% \captionbox{\label{fig:sgdccb2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdccb2.png}}\\[2ex]
+% \captionbox{\label{fig:sgdccb3}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdccb3.png}}
+\end{figure}
+\clearpage
+#+end_export
+
+#+begin_src python :results none :exports none :tangle ./Week6Src.py
+bf = BatchedFunction(f, M)
+o = ConstantStep.set_parameters(x0 = np.array([3, 3]),
+                                alpha =[0.05, 0.085, 0.1, 0.5],
+                                f = bf,
+                                iters=30,
+                                b=5).run()
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcca.png
+o = ConstantStep.run()
+x1s = np.linspace(-20, 5, 50)
+x2s = np.linspace(-20, 5, 50)
+plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
+#+RESULTS:
+[[file:./images_week6/sgdcca.png]]
+
+* (c) Mini-Batch SGD with Different Step Calculations
+** (i) Polyak Step Size
+** (ii) RMPSProp
+** (iii) Heavy Ball
+** (iv) Adam
 * Appendix
 ** Code Listing
 #+begin_export latex
