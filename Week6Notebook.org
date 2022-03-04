@@ -91,7 +91,7 @@ importlib.reload(Algorithms)
 importlib.reload(DataType)
 importlib.reload(Plotting)
 from OptimisationAlgorithmToolkit.Function import BatchedFunction, SymbolicFunction
-from OptimisationAlgorithmToolkit.Algorithms import ConstantStep
+from OptimisationAlgorithmToolkit.Algorithms import ConstantStep, Polyak, RMSProp, HeavyBall, Adam
 from OptimisationAlgorithmToolkit.DataType import create_labels, get_titles
 from OptimisationAlgorithmToolkit.Plotting import ploty, plot_contour, plot_path, plot_step_size
 #+end_src
@@ -495,10 +495,98 @@ plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
 [[file:./images_week6/sgdcca.png]]
 
 * (c) Mini-Batch SGD with Different Step Calculations
+- Polyak: \ref{fig:sgdp}
+- RMSProp: \ref{fig:sgdrms}
+- Heavy Ball: \ref{fig:sgdhb}
+- Adam: \ref{fig:sgda}
+
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:sgdp}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdp.png}}
+\captionbox{\label{fig:sgdrms}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdrms.png}}\\[2ex]
+\captionbox{\label{fig:sgdhb}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdhb.png}}
+\captionbox{\label{fig:sgda}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgda.png}}\\[2ex]
+\end{figure}
+\clearpage
+#+end_export
+
 ** (i) Polyak Step Size
+#+begin_src python :results none :exports none :tangle ./Week6Src.py
+bf = BatchedFunction(f, M)
+o = Polyak.set_parameters(x0 = np.array([3, 3]),
+                          f = bf,
+                          iters=60,
+                          f_star=0,
+                          eps=0.0001,
+                          b=5).run()
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdp.png
+o = Polyak.run()
+x1s = np.linspace(-20, 5, 50)
+x2s = np.linspace(-20, 5, 50)
+plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
 ** (ii) RMPSProp
+#+begin_src python :results none :exports none :tangle ./Week6Src.py
+bf = BatchedFunction(f, M)
+o = RMSProp.set_parameters(x0 = np.array([3, 3]),
+                           f = bf,
+                           iters=60,
+                           alpha0=0.085,
+                           beta=0.8,
+                           eps=0.0001,
+                           b=5).run()
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdrms.png
+o = RMSProp.run()
+x1s = np.linspace(-20, 5, 50)
+x2s = np.linspace(-20, 5, 50)
+plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
 ** (iii) Heavy Ball
+#+begin_src python :results none :exports none :tangle ./Week6Src.py
+bf = BatchedFunction(f, M)
+o = HeavyBall.set_parameters(x0 = np.array([3, 3]),
+                           f = bf,
+                           iters=60,
+                           alpha=0.085,
+                           beta=0.8,
+                           b=5).run()
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdhb.png
+o = HeavyBall.run()
+x1s = np.linspace(-20, 5, 50)
+x2s = np.linspace(-20, 5, 50)
+plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
 ** (iv) Adam
+#+begin_src python :results none :exports none :tangle ./Week6Src.py
+bf = BatchedFunction(f, M)
+o = Adam.set_parameters(x0 = np.array([3, 3]),
+                        f = bf,
+                        iters=60,
+                        alpha=10,
+                        beta1=0.94,
+                        beta2=0.97,
+                        eps=0.0001,
+                        b=5).run()
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgda.png
+o = Adam.run()
+x1s = np.linspace(-20, 5, 50)
+x2s = np.linspace(-20, 5, 50)
+plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
+
 * Appendix
 ** Code Listing
 #+begin_export latex
