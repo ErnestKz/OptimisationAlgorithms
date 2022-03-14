@@ -19,9 +19,9 @@ def plot_contour(records, x1r, x2r, log=False, sym=False):
     X1, X2 = np.meshgrid(x1r, x2r)
     Z = np.vectorize(f.function)(X1, X2)
     if log:
-        plt.contourf(X1, X2, Z, locator=LogLocator(), cmap='RdGy')
+        plt.contourf(X1, X2, Z, locator=LogLocator(), cmap=plt.get_cmap('gist_earth'))
     else:
-        plt.contourf(X1, X2, Z, cmap='RdGy')
+        plt.contourf(X1, X2, Z, cmap=plt.get_cmap('gist_earth'))
     xlim = plt.xlim()
     ylim = plt.ylim()
     for (X, label) in dicts_collect(("X", "label"), records):

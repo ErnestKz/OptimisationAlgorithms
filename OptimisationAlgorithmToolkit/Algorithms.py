@@ -9,8 +9,6 @@ import numpy as np
 
 from OptimisationAlgorithmToolkit.Function import FunctionIterator
 
-
-
 def polyak(x0, f, f_star, eps, iters, b=None):
     fi = FunctionIterator(f, b, iters) ; f = f.function ; x = x0 ; X = [x] ; Y = [f(*x)]
     

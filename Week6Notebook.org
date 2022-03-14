@@ -79,8 +79,6 @@ import numpy as np
 #+end_src
 
 #+begin_src python :results none :exports none :tangle ./Week6Src.py
-# import OptimisationAlgorithmToolkit
-
 from OptimisationAlgorithmToolkit import Algorithms
 from OptimisationAlgorithmToolkit import DataType
 from OptimisationAlgorithmToolkit import Plotting
@@ -114,51 +112,6 @@ def f(x, minibatch):
 
 M = generate_trainingdata()
 #+end_src
-
-#+begin_src python :results replace :exports none :tangle ./Week6Src.py
-def generate_trainingdata(m=25):
-    return np.array([0,0])+0.25*np.random.randn(m,2)
-
-def f(x, minibatch):
-    # loss function sum_{w in training data} f(x,w)
-    y=0; count=0
-    for w in minibatch:
-        z=x-w-1
-        y=y+min(38*(z[0]**2+z[1]**2), (z[0]+9)**2+(z[1]+10)**2)
-        count=count+1
-    return y/count
-M = generate_trainingdata()
-print(M)
-#+end_src
-
-#+RESULTS:
-#+begin_example
-[[-0.09162415 -0.34406353]
- [ 0.11348505  0.14783163]
- [-0.1092448  -0.11302683]
- [ 0.4915196  -0.31553493]
- [ 0.13395157  0.02917406]
- [-0.358592   -0.63167542]
- [ 0.04006162 -0.42455172]
- [ 0.37029393 -0.35345275]
- [-0.07575259 -0.19642429]
- [-0.35633779 -0.28766926]
- [ 0.44842531  0.08696532]
- [-0.2143659  -0.12421594]
- [ 0.33090583 -0.21124951]
- [-0.25572899 -0.01782207]
- [-0.24551497  0.02973253]
- [ 0.05316053  0.1892    ]
- [ 0.18237003 -0.35825178]
- [-0.15005759 -0.22135219]
- [ 0.28432854  0.34575478]
- [ 0.29388949 -0.36609193]
- [-0.14714522 -0.08662135]
- [ 0.273882    0.46251424]
- [ 0.40002843  0.27895126]
- [-0.4564874  -0.43876783]
- [-0.45245883  0.17265134]]
-#+end_example
 
 *** Code Description
 
@@ -213,8 +166,7 @@ print(M)
 
 - While I'm doing the assignment, write my thoughts in a presentable way as I go.
   - This will probably save time and effort.
-* (a) Stochastic Gradient Descent
-** (i) Implementation of SGD
+*** SGD
 - Use approximate derivatives $Df_{\theta_1}(\theta)$ instead of exact derivatives $\frac{\partial f}{\partial \theta_1} (\theta)$
   - $Df_{\theta_i} = \frac{\partial f}{\partial \theta_i} + noise$
   - For ML we are trying to optimise the function:
@@ -241,7 +193,25 @@ print(M)
 	- sample with replacement after every update
 	  - need to differentiate a new loss function after every iteration?
 
-#+begin_src python :results none :exports code :tangle ./Week6Src.py
+* (a) Stochastic Gradient Descent
+** (i) Implementation of SGD
+- Use approximate derivatives $Df_{\theta_1}(\theta)$ instead of exact derivatives $\frac{\partial f}{\partial \theta_1} (\theta)$
+- For ML we are trying to optimise the function:
+  - $J(\theta) = \frac{1}{m} \sum\limits_{i=1}^m loss(\theta, x^{(i)}, y^{(i)})$
+  - $(x^{(1)}, y^{(1)}), (x^{(2)}, y^{(2)}), \hdots,(x^{(m)}, y^{(m)})$ is our training data.
+  - Real derivatives are: $\frac{\partial J}{\partial \theta_1} (\theta) = \frac{1}{m} \sum\limits_{i=1}^{m} \frac{\partial loss}{\partial \theta_1}(\theta, x^{(i)},y^{(i)}), \frac{\partial J}{\partial \theta_2} (\theta) = \frac{1}{m} \sum\limits_{i=1}^{m} \frac{\partial loss}{\partial \theta_2}(\theta, x^{(i)},y^{(i)})$
+
+- Pick random sample of $b$ points from training data.
+- Let $N$ be the set of $b$ indices.
+- Then use approx derivatives:
+  - $DJ_{\theta_1} (\theta) = \frac{1}{b} \sum\limits_{i \in N} \frac{\partial loss}{\partial \theta_1}(\theta, x^{(i)},y^{(i)}), DJ_{\theta_2} (\theta) = \frac{1}{b} \sum\limits_{i \in N} \frac{\partial loss}{\partial \theta_2}(\theta, x^{(i)},y^{(i)})$
+
+- Below is an implementation using constant step size that uses all the data in the epoch rather than sampling randomly from the data each iteration.
+  - The data is shuffled at the start of the "epoch" to have the effect of random sampling.
+  - During the iterations the same data cant be picked twice and data won't be wasted. Batches of size $b$ are used to form the approximate derivative.
+  - finite difference method is used to get the derivatives for each parital $i$.
+
+#+begin_src python :results none :exports none :tangle ./Week6Src.py
 x = np.array([1, 2]); b = 5; m = len(M); alpha=0.4; iters=50
 for _ in range(iters):
     N = np.random.choice(np.arange(m), b)
@@ -261,29 +231,27 @@ for _ in range(iters):
         x = x - alpha * DJ
 #+end_src
 
+- Generalised version used provided in the appendix in which the function to be optimised is implemented as a Python iterator which returns a new set of approximate derivatives upon each iteration based on the batch. Each step size algorithm from previous assignment is adjusted to use this function iterator to retrieve the approximate gradients each iteration, thus giving us stochastic gradients, e.g for polyak:
+  
 #+begin_src python :results none :exports code :tangle ./Week6Src.py
-f = BatchedFunction(f, M, b=5, iters=50) ; fi = iter(f) ; f = f.function;  
-for fN, dfs in fi:
-    step = alpha * np.array([df(*x) for df in dfs])
-    x = x - step
+def polyak(x0, f, f_star, eps, iters, b=None):
+    fi = FunctionIterator(f, b, iters) ; f = f.function ; x = x0 ; X = [x] ; Y = [f(*x)]
     
-    X += [x] ; Y += [f(*x)]
+    for fN, dfs in fi:
+        fdif = f(*x) - f_star
+        df_squared_sum = np.sum(np.array([df(*x)**2 for df in dfs]))
+        alpha = fdif / (df_squared_sum + eps)
+        x = x - alpha * np.array([df(*x) for df in dfs])
+
+        X += [x] ; Y += [f(*x)]
     return X, Y
 #+end_src
-
-#+begin_src python :results replace :exports code :tangle ./Week6Src.py
-np.arange(0, 10, 10)
-np.arange(0, 0+10)
-#+end_src
-
-#+RESULTS:
-: array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 
 ** (ii) Plotting Loss Function to Optimise
 Fig \ref{fig:contour} is the contour plot. Fig \ref{fig:wireframe} is the wireframe plot.
 
-The range of values chosen are -40 and 25. This is because for larger range it is strongly convex, but when zoomed in, there is an interesting dip to the side of the function, which can be considered as a local minimum.
-Also the function increses rapidly beyond 25 and -40, it's already at $10^4$, although perhaps it will be interesting starting the optimisation beyond that to see how it behaves.
+The range of values chosen are -20 and 5. This is because for larger range it is strongly convex, but when zoomed in, there is an interesting dip to the side of the global minimum, which can be considered as a local minimum to test how the algorithm may behave coming across it.
+Also the function increses rapidly beyond -20 and 5, it's already at $10^3$.
 
 #+begin_export latex
 \begin{figure}[htb]
@@ -291,14 +259,14 @@ Also the function increses rapidly beyond 25 and -40, it's already at $10^4$, al
 \captionbox{\label{fig:contour}}{\includegraphics[width=\figwidth\textwidth]{images_week6/contour.png}}
 \captionbox{\label{fig:wireframe}}{\includegraphics[width=\figwidth\textwidth]{images_week6/wireframe.png}}\\[2ex]
 \end{figure}
-\clearpage
+% \clearpage
 #+end_export
-
+*** Code :noexport:
 #+begin_src python :results none :exports none :tangle ./Week6Src.py
 m = len(M) ; b = m ; N = np.arange(b)
 fN = lambda x1, x2: f(np.array([x1, x2]), minibatch=M[N])
-x1s = np.linspace(-40, 25, 200)
-x2s = np.linspace(-40, 20, 200)
+x1s = np.linspace(-20, 5, 100)
+x2s = np.linspace(-20, 5, 100)
 X1, X2 = np.meshgrid(x1s, x2s)
 Z = np.vectorize(fN)(X1, X2)
 #+end_src
@@ -323,17 +291,15 @@ fig = plt.figure()
 ax = plt.axes(projection='3d')
 # ax.contour3D(X1, X2, Z, 50, cmap='autumn')
 ax.plot_wireframe(X1, X2, Z, cmap=cm.coolwarm, linewidth=0.2)
-ax.view_init(10, 80)
-ax.set_title('Wireframe')
+ax.view_init(10, 20)
+# ax.set_title('Wireframe')
 plt.xlabel(r'$x_1$')
 plt.ylabel(r'$x_2$')
 #+end_src
 
 ** (iii) Calculating Derivative of f
-- With Sympy
-  - Can I set it up in such a way that can differentiate with the batchiness of it too?
 
-- finite_diff is defined such that can specify which input parameter to the function we add the perturbation.
+- finite diff is defined such that can specify which input parameter of the function we add the perturbation.
 
 #+begin_src python :results replace :exports code :tangle ./Week6Src.py
 def finite_diff(f, x, i, delta=0.0001):
@@ -341,7 +307,7 @@ def finite_diff(f, x, i, delta=0.0001):
     return (f(x) - f(x - d)) / delta
 #+end_src
 
-- We index our dataset $M$ with $N$ and create a closure in the lambda with the batch.
+- We index our dataset $M$ with $N$ and create a closure in the lambda capturing the batch.
 - Then we can pass the resulting function to the finite difference function.
 
 #+begin_src python :results replace :exports code :tangle ./Week6Src.py
@@ -349,22 +315,17 @@ fN = lambda x: f(x, minibatch=M[N])
 x = np.array([10, 10])
 Dfx1 = finite_diff(fN, x, 0) # w.r.t x1
 Dfx2 = finite_diff(fN, x, 1) # w.r.t x2
-print(Dfx1)
-print(Dfx2)
 #+end_src
-
-#+RESULTS:
-: 33.807431020795775
-: 38.154229460508304
 
 * (b) Optimising f
 ** (i) Gradient Descent with Constant Step-Size
 
-A value of alpha of 0.085 is picked such that the gradient descent gets stuck in the local minimum. Perhaps the SGD will demonstrate that it will be able to oercome it.
+A value of alpha of 0.085 is picked such that the gradient descent gets stuck in the local minimum, but an alpha a bit higher will cause it to escape. Perhaps the SGD will demonstrate that it will be able to escape it.
 
 Fig \ref{fig:gdcy} is gradient decent with constant step plotting y value acorss iteration.
 Fig \ref{fig:gdcc} is gradient decent with constant step on countour plot.
 
+The GD is seen to do a form of chattering around the local minimum in Fig \ref{fig:gdcy}
 #+begin_export latex
 \begin{figure}[htb]
 \centering
@@ -395,18 +356,27 @@ x2s = np.linspace(-20, 5, 50)
 plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
 #+end_src
 
+#+RESULTS:
+[[file:./images_week6/gdcc.png]]
+
 ** (ii) Mini-Batch Stochastic Gradient Descent
 
-Figs \ref{fig:sgdcc}, \ref{fig:sgdcc2}, \ref{fig:sgdcc3}  shows the effect of varience between runs. It can sometimes escape the local minimum, depending on if it gets the luckly batch of data that forms the function/gradient at critical times.
+Figs Run 1 = (\ref{fig:sgdcc}, \ref{fig:sgdcy}), Run 2 = (\ref{fig:sgdcc2}, \ref{fig:sgdcy2}), Run 3 = (\ref{fig:sgdcc3}, \ref{fig:sgdcy3}) shows the variance between runs. It can sometimes escape the local minimum, depending on if it gets the luckly batch of data that forms the function/gradient at critical times.
 We can see that the algorithm can walk around at the local mimimum, and then escape. And we also see that it can get luckly and it gets the lucky batch in a timely manner to avoid the dance at the local minimum and directly step over it. Perhaps a batch causes the slope to increase and allows for the step to hop over.
-In gradient descent, it is stuck chattering.
+
+In Fig \ref{fig:sgdcy} we can see that the y value gets quite close to the minimum value, but perhaps the function is quite volatile at the small bowl due its size and then it gets a batch/gradient that allows it to jump out.
+
+In gradient descent, it is stuck chattering at a predictable, preiodic fashion, this is because the gradients stay the same for the x1 and x2's the algorithm finds itself at (also because it's a circle it doesn't have to exactly loop in the same 2 places for a perfect period, just on the the same distance from the center). Whereas the chattering seen in \ref{fig:sgdcy} is not periodic at all due to the varying approximate derivatives due to the random sampling of the data that constructs the function.
 
 #+begin_export latex
 \begin{figure}[htb]
 \centering
 \captionbox{\label{fig:sgdcc}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcc.png}}
-\captionbox{\label{fig:sgdcc2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcc2.png}}\\[2ex]
+\captionbox{\label{fig:sgdcy}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcy.png}}\\[2ex]
+\captionbox{\label{fig:sgdcc2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcc2.png}}
+\captionbox{\label{fig:sgdcy2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcy2.png}}\\[2ex]
 \captionbox{\label{fig:sgdcc3}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcc3.png}}
+\captionbox{\label{fig:sgdcy3}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcy3.png}}\\[2ex]
 \end{figure}
 \clearpage
 #+end_export
@@ -422,32 +392,38 @@ o = ConstantStep.set_parameters(x0 = np.array([3, 3]),
                                 b=[5]).run()
 #+end_src
 
-#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcy.png
+#+begin_src python :results none :exports none :tangle ./Week6Src.py 
 o = ConstantStep.run()
-ploty(copy.deepcopy(o))
 #+end_src
 
 #+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcc.png
-o = ConstantStep.run()
 x1s = np.linspace(-20, 5, 50)
 x2s = np.linspace(-20, 5, 50)
 plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcy.png
+ploty(copy.deepcopy(o))
 #+end_src
 
 #+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcc2.png
-o = ConstantStep.run()
 x1s = np.linspace(-20, 5, 50)
 x2s = np.linspace(-20, 5, 50)
 plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcy2.png
+ploty(copy.deepcopy(o))
 #+end_src
 
 #+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcc3.png
-o = ConstantStep.run()
 x1s = np.linspace(-20, 5, 50)
 x2s = np.linspace(-20, 5, 50)
 plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
 #+end_src
 
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcy3.png
+ploty(copy.deepcopy(o))
 #+end_src
 
 ** (iii) Varying Mini-Batch Size on SGD
@@ -481,9 +457,9 @@ x2s = np.linspace(-20, 5, 50)
 plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
 #+end_src
 
-#+RESULTS:
-[[file:./images_week6/sgdccb.png]]
-
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcyb.png
+ploty(copy.deepcopy(o))
+#+end_src
 
 #+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdccb2.png
 o = ConstantStep.run()
