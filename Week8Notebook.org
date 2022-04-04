@@ -1,0 +1,772 @@
+#+AUTHOR:Ernests Kuznecovs - 17332791 - kuznecoe@tcd.ie
+#+Date:21st March
+#+Title:Optimisation Algorithms - Week 8 Assignment
+
+#+begin_export latex
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+#+end_export
+* Preamble                                                         :noexport:
+#+PROPERTY: header-args:python :session a3
+#+PROPERTY: header-args:python+ :async yes
+#+PROPERTY: header-args:python+ :eval never-export
+#+PROPERTY: header-args:elisp :eval never-export
+#+EXCLUDE_TAGS: noexport
+
+#+LaTeX_HEADER: \usepackage{listings}
+#+LaTeX_HEADER: \usepackage{xcolor}
+#+LaTeX_HEADER: \usepackage{minted}
+#+LaTeX_HEADER: \usepackage[a4paper, total={6.7in, 10.5in}]{geometry}
+
+#+LaTeX_HEADER: \usepackage{caption}
+#+LaTeX_HEADER: \newcommand\figwidth{0.48}
+
+#+begin_src elisp :results none :exports none
+(setq-local org-image-actual-width '(512))
+(setq-local org-confirm-babel-evaluate nil)
+(setq-local org-src-preserve-indentation 't)
+
+(setq org-latex-listings t)
+(setq org-latex-prefer-user-labels t)
+#+end_src
+
+#+begin_src elisp :results none :exports none
+(use-package jupyter
+  :config
+  (org-babel-do-load-languages 'org-babel-load-languages '((emacs-lisp . t)
+							   (python . t)
+							   (jupyter . t)))
+  (org-babel-jupyter-override-src-block "python")
+  (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images)
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((emacs-lisp . t)
+     (python . t)
+     (jupyter . t))))
+#+end_src
+
+* Python Imports                                                   :noexport:
+#+begin_src python :results none :exports none :tangle ./Week8Src.py
+import matplotlib as mpl
+mpl.rcParams['figure.dpi'] = 200
+mpl.rcParams['figure.facecolor'] = '1'
+import matplotlib.pyplot as plt
+plt.style.use('seaborn-white')
+import copy
+import numpy as np
+#+end_src
+
+#+begin_src python :results none :exports none :tangle ./Week8Src.py
+from OptimisationAlgorithmToolkit import Algorithms
+from OptimisationAlgorithmToolkit import DataType
+from OptimisationAlgorithmToolkit import Plotting
+from OptimisationAlgorithmToolkit import Function
+import importlib
+importlib.reload(Function)
+importlib.reload(Algorithms)
+importlib.reload(DataType)
+importlib.reload(Plotting)
+from OptimisationAlgorithmToolkit.Function import BatchedFunction, SymbolicFunction
+from OptimisationAlgorithmToolkit.Algorithms import ConstantStep, Polyak, RMSProp, HeavyBall, Adam
+from OptimisationAlgorithmToolkit.DataType import create_labels, get_titles
+from OptimisationAlgorithmToolkit.Plotting import ploty, plot_contour, plot_path, plot_step_size
+
+from timeit import timeit
+#+end_src
+
+* Code Download                                                    :noexport:
+
+#+begin_src python :results replace :exports none :tangle ./Week8Src.py
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers, regularizers
+from keras.layers import Dense, Dropout, Activation, Flatten, BatchNormalization
+from keras.layers import Conv2D, MaxPooling2D, LeakyReLU
+from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.utils import shuffle
+import matplotlib.pyplot as plt
+plt.rc('font', size=18)
+plt.rcParams['figure.constrained_layout.use'] = True
+import sys
+
+# Model / data parameters
+num_classes = 10
+input_shape = (32, 32, 3)
+
+# the data, split between train and test sets
+(x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
+n=5000
+x_train = x_train[1:n]; y_train=y_train[1:n]
+#x_test=x_test[1:500]; y_test=y_test[1:500]
+
+# Scale images to the [0, 1] range
+x_train = x_train.astype("float32") / 255
+x_test = x_test.astype("float32") / 255
+print("orig x_train shape:", x_train.shape)
+
+# convert class vectors to binary class matrices
+y_train = keras.utils.to_categorical(y_train, num_classes)
+y_test = keras.utils.to_categorical(y_test, num_classes)
+
+use_saved_model = False
+if use_saved_model:
+	model = keras.models.load_model("cifar.model")
+else:
+	model = keras.Sequential()
+	model.add(Conv2D(16, (3,3), padding='same', input_shape=x_train.shape[1:],activation='relu'))
+	model.add(Conv2D(16, (3,3), strides=(2,2), padding='same', activation='relu'))
+	model.add(Conv2D(32, (3,3), padding='same', activation='relu'))
+	model.add(Conv2D(32, (3,3), strides=(2,2), padding='same', activation='relu'))
+	model.add(Dropout(0.5))
+	model.add(Flatten())
+	model.add(Dense(num_classes, activation='softmax',kernel_regularizer=regularizers.l1(0.0001)))
+	model.compile(loss="categorical_crossentropy", optimizer='adam', metrics=["accuracy"])
+	model.summary()
+
+	batch_size = 128
+	epochs = 20
+	history = model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, validation_split=0.1)
+	model.save("cifar.model")
+	plt.subplot(211)
+	plt.plot(history.history['accuracy'])
+	plt.plot(history.history['val_accuracy'])
+	plt.title('model accuracy')
+	plt.ylabel('accuracy')
+	plt.xlabel('epoch')
+	plt.legend(['train', 'val'], loc='upper left')
+	plt.subplot(212)
+	plt.plot(history.history['loss'])
+	plt.plot(history.history['val_loss'])
+	plt.title('model loss')
+	plt.ylabel('loss'); plt.xlabel('epoch')
+	plt.legend(['train', 'val'], loc='upper left')
+	plt.show()
+
+preds = model.predict(x_train)
+y_pred = np.argmax(preds, axis=1)
+y_train1 = np.argmax(y_train, axis=1)
+print(classification_report(y_train1, y_pred))
+print(confusion_matrix(y_train1,y_pred))
+
+preds = model.predict(x_test)
+y_pred = np.argmax(preds, axis=1)
+y_test1 = np.argmax(y_test, axis=1)
+print(classification_report(y_test1, y_pred))
+print(confusion_matrix(y_test1,y_pred))
+#+end_src
+
+* Functions to Optimise                                            :noexport:
+
+#+begin_src python :results none :exports code :tangle ./Week8Src.py
+from sympy import symbols, Max, Abs
+x1, x2 = symbols('x1 x2', real=True)
+
+sym_f1 = 3 * (x1-9)**4 + 5 * (x2-9)**2
+f1 = SymbolicFunction(sym_f1, [x1, x2], "f_1").function_list_arg
+f1o = SymbolicFunction(sym_f1, [x1, x2], "f_1")
+
+sym_f2 = Max(x1-9 ,0) + 5 * Abs(x2-9)
+f2 = SymbolicFunction(sym_f2, [x1, x2], "f_2").function_list_arg
+f2o = SymbolicFunction(sym_f2, [x1, x2], "f_2")
+#+end_src
+
+* Code                                                             :noexport:
+** Running Time
+Scatter plot of runnting time and final value.
+
+Vary parameters and collect running time with final value.
+
+plot_data :: [(float, float)]
+plot_data :: [(running_time, value)]
+plot_data :: [(x, y)]
+
+
+*** Gradient Descent
+**** Parameters
+
+#+begin_src python :results none :exports both :tangle ./Week8Src.py
+x0 = np.array([10, 10])
+alpha = 0.1
+f = f1o
+iters=100
+#+end_src
+
+**** Running Gradient Descent
+
+#+begin_src python :results replace :exports both :tangle ./Week8Src.py
+o = ConstantStep.set_parameters(x0=x0, alpha=alpha, f=f, iters=iters).run()
+# print("Final f:", o[0]['Y'][-1])
+# print("Final xs:", o[0]['X'][-1])
+#+end_src
+
+#+begin_src python :results none :exports both :tangle ./Week8Src.py
+gd = lambda: ConstantStep.set_parameters(x0=x0, alpha=alpha, f=f, iters=iters).run()
+#+end_src
+
+#+begin_src python :results replace :exports both :tangle ./Week8Src.py
+timeit(gd)
+#+end_src
+
+**** Plotting
+
+
+** Evaluations
+Scatter plot of #evaluations and final value.
+
+** Contour
+Scatter plot of time buckets and plot of x1 and x2 for Random Samples.
+Ordinary plot of x1 and x2 across all time.
+
+* (a) Global Random Search
+** (i) Global Random Search
+Global random search is defined with input arguments:
+- 'intervals' has the type [(float, float)],
+  - ith element of the list corresponds to the ith parameter of the function we are optimising.
+  - First value of tuple is the minimum value the parameter can take.
+  - Second value of tuple is the maximum value the parameter can take.
+- 'N' has the type int
+  - It's number of times to sample the parameters and run the function with those parameters.
+- 'f' has the type function of arity len(intervals)
+  - The function that takes in len(intervals) parameters and returns a scalar value, this is the function we are trying to find the minimum value for.
+Inside our function, we keep a variable 'lowest' that keep track of what the lowest function value was and the corresponding parameters that achieved the lowest value.
+Each iteration (N max iterations) we randomly sample parameters for our function within the intervals we specified, then apply those parameters to the function and see if we get a new lowest value.
+
+#+begin_src python :results none :exports code :tangle ./Week8Src.py
+def global_random_search(intervals, N, f):
+
+    # lowest :: (val, [float])
+    # fst is the lowest function value achieved
+    # snd is the list of parameter values
+    lowest = None               
+
+    # unzip list of tuples
+    l = [l for l, u in intervals]
+    u = [u for l, u in intervals]
+
+    # sample and run N times
+    for s in range(N):
+        r = np.random.uniform(l, u) 
+        v = f(r)
+        if (not lowest) or lowest[0] > v:
+            lowest = (v.copy(), r.copy())
+    return lowest
+#+end_src
+
+*** Code                                                           :noexport:
+#+begin_src python :results replace :exports none :tangle ./Week8Src.py
+a = [1, 2, 3]
+b = [4, 5, 6]
+c = np.random.uniform(a, b)
+print(c)
+#+end_src
+
+*** Notes                                                          :noexport:
+- As input, number of params n
+  - the min, max value of each
+  - $l_i$ = min, $u_i$ = max, for $i$'th param
+  - $N$ = the number of samples to take
+- Algo draws value for $i$'th param uniformly at random between $l_i$ and $u_i$
+  - doing this for all n params
+    - a full param vec is generated
+  - cost function is evaluated at this vector
+
+  - if cost func is lowest seen so far
+    - it is recorded and process repeated N times
+** (ii) Global Random Search on $f_1$ and $f_2$
+- $f_1(x_{1},x_{2}) = 3 \left(x_{1} - 9\right)^{4} + 5 \left(x_{2} - 9\right)^{2}$
+- $f_2(x, y) = 5 \left|{y - 9}\right| + \max\left(0, x - 9\right)$
+  
+For evaluating function value vs execution time it will be difficult to measure as GRS has quite a lot of randomness. The result changes from run to run on GRS, while for GD it doesn't.
+
+$\alpha$ and $x_0$ will be kept the same for both function on GD because the intervals will also be kept the same for GRS.
+
+*** $f_1$
+On $f_1$ global random search can handle the steep nature of it, as the slope has no effect algorithm. Wheras on GD, it is very sensitive to inital $x$, and cause numerical errors. Though the chance of GRS landing on the minimum can be slim if intervals are too large, $f_1$ has a relatively small area where the minimum lies at a scale of -10 to 10.
+
+#+begin_src python :results replace :exports both :tangle ./Week8Src.py
+%timeit o = ConstantStep.set_parameters(x0 = np.array([10, 10]), alpha = 0.1, f = f1o, iters=100).run()
+# print("Final f:", o[0]['Y'][-1])
+# print("Final xs:", o[0]['X'][-1])
+#+end_src
+
+#+RESULTS:
+: 600 µs ± 2.3 µs per loop (mean ± std. dev. of 7 runs, 1000 loops each)
+
+#+begin_src python :results none :exports both :tangle ./Week8Src.py
+intervals = [(-10, 10), (-10, 10)]
+N = 100
+f = f1
+#+end_src
+
+#+begin_src python :results replace :exports both :tangle ./Week8Src.py
+%timeit global_random_search(intervals, N, f)
+#+end_src
+
+#+RESULTS:
+: 894 µs ± 3.48 µs per loop (mean ± std. dev. of 7 runs, 1000 loops each)
+
+#+begin_src python :results replace :exports both :tangle ./Week8Src.py
+testGRS(intervals, N, f1, 1000)
+#+end_src
+
+#+RESULTS:
+: 1000 runs of GRS
+: Standard deviation on final function values:  29.120486828128666
+: Mean on final function values:  12.511899527242294
+
+*** $f_2$
+On $f_2$, because there the minimum is not so narroa on a -10,10 scale, GRS can land at function value of 0.5 a lot of the time. GD is very well behaved on this function since it is concave-like, and reaches the minmum a lot in a lot faster than 100 iterations.
+
+
+#+begin_src python :results replace :exports both :tangle ./Week8Src.py
+o = ConstantStep.set_parameters(x0 = np.array([10, -10]),
+                                alpha = 0.1,
+                                f = f2o,
+                                iters= 100 ).run()
+print("Final f:", o[0]['Y'][-1])
+print("Final xs:", o[0]['X'][-1])
+#+end_src
+
+#+RESULTS:
+: 0.0
+: [8.9 9. ]
+
+#+begin_src python :results replace :exports both :tangle ./Week8Src.py
+intervals = [(-10, 10), (-10, 10)]
+testGRS(intervals, N=100, f=f2, runs=1000)
+#+end_src
+
+#+RESULTS:
+: 1000 runs of GRS
+: Standard deviation on final function values:  0.5071440379712903
+: Mean on final function values:  0.5086869263886178
+
+
+*** Code                                                           :noexport:
+**** Test GRS
+
+#+begin_src python :results none :exports none :tangle ./Week8Src.py
+def testGRS(intervals, N, f, runs):
+    r = []
+    for i in range(runs):
+        r += [global_random_search(intervals, N, f)[0]]
+
+    print(runs, "runs of GRS")
+    print("Standard deviation on final function values: ", np.std(r))
+    print("Mean on final function values: ", np.mean(r))
+#+end_src
+
+*** Notes                                                          :noexport:
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:grsf1}}{\includegraphics[width=\figwidth\textwidth]{images_week4/grsf1.png}}
+\captionbox{\label{fig:grsf2}}{\includegraphics[width=\figwidth\textwidth]{images_week4/grsf2.png}}\\[2ex]
+\end{figure}
+\clearpage
+#+end_export
+
+- Running time?
+  - Count in terms of function evaluations
+
+- Final value vs function evaluations
+- The global random search will have some randomness
+
+- Hard to compare as
+  - the range we pick directly impacts performance greatly
+  - hard to compare as grs has a lot of randomness in accuracy
+
+* (b) Modifying Global Random Search
+** (i) Population Based Samping
+
+Two version are implemented, the first one with that doesn't grow eponentially in runtime, and one that does.
+The non exponential one will be presented. Exponential one can be found in the appendex of code under the function name grs2.  
+
+*** Population Based Sampling
+
+Population bases sampling chooses $N$ random points, takes the top $M$ of them, and then for each of those $M$ points, $N$ points are sampled within the neighbourhood, and the top points are taken out of those, and the process is repeated.
+$N$ random points are chosen in a region of $(\frac{1}{M*\epsilon})^{c}$  of the original interval, where $c$ is the depth of iteration, $\epsilon$ is a hyperparameter to scale size of the neighbourhood, and M is the number of top points selected.
+- If we assume, that the best M points are evenly placed across the interval, then having 1/M of the size of the interval will mean that the sum of the sub intervals will span the range of the whole interval.
+
+In the code, the algorithm first samples $N$ points, top $M$ are taken and this initiates the loop for a depth of $c$. From the parameter values calculated for an $M$, new intervals are centered around the parameter value, decreased and scaled with original range the parameter was initially, and each iteration reduces the neighbourhood. This algorithm does not throw away the $M$ points when the new $N$ are computed, the $M$ points are included in picking the next top $M$.
+
+#+begin_src python :results none :exports code :tangle ./Week8Src.py
+def take_top(M, Nresults):
+    # Nresults :: [(float, [float])]
+    Nresults.sort(key=(lambda x : x[0]))
+    return Nresults[0:M].copy()
+
+# each param has a new interval centered around param value
+# interval are centered around params
+def get_new_intervals_2(params, intervals, M, c):
+    # new_intervals :: [(float, float)]
+    new_intervals = []
+    for i, param_val in enumerate(params):
+        l, u = intervals[i]
+        interval_range = (u - l)
+        offset = ((1/(M**c)) * interval_range) / 2
+        new_l = np.clip(param_val-offset, l, u)
+        new_h = np.clip(param_val+offset, l, u)
+        new_intervals += [(new_l, new_h)]
+    return new_intervals
+
+def unzip_intervals(intervals):
+    l = [l for l, u in intervals]
+    u = [u for l, u in intervals]
+    return l,u
+
+def grs3(intervals, N, M, f, c, eps=1):
+    # intervals :: [(l, u)]
+    
+    # Nresults :: [(float, [float])]
+    # fst is the lowest function value achieved
+    # snd is the list of parameter values
+    Nresults = []
+    l,u = unzip_intervals(intervals)
+    for s in range(N):
+        r = np.random.uniform(l, u) ; v = f(r)
+        Nresults += [(v.copy(), r.copy())]
+    # topM :: [(float, [float])]
+    topM = take_top(M, Nresults)
+    
+    for i in range(c):
+        Nresults = []
+        for _, param_values in topM:
+            l,u = unzip_intervals(get_new_intervals_2(param_values, intervals, M*eps, i+1))
+            for _ in range(N):
+                r = np.random.uniform(l, u) ; v = f(r)
+                Nresults += [(v.copy(), r.copy())]
+        Nresults += topM
+        topM = take_top(M, Nresults)
+    return take_top(1, topM)[0]
+#+end_src
+
+*** Recursive Population Based Sampling :noexport: 
+Recursive population based search chooses N random points, takes the top M of them, and then for each of those M points, the the process is repeated. This will be an exponential increase in computation, but perhaps only a depth of 3 is needed.
+The interval of the parameter upon each iteration gets smaller by a factor of 1/M, the reasoning for this is:
+- If we assume, that the best M points are evenly placed across the interval, then having 1/M of the size of the interval will mean that the sum of the sub intervals will span the range of the whole interval.
+
+My population based random search has additional inputs:
+- M: this is the amount of top values we should take out of our N iterations.
+- c: is the depth of the search.
+- eps: can be a hyperparameter to control the rate of narrowing of the neighbourhood.
+
+#+begin_src python :results none :exports code :tangle ./Week8Src.py
+# each param has a new interval centered around param value
+# interval will be at a range of 1/M
+def get_new_intervals(params, intervals, M):
+    # new_intervals :: [(float, float)]
+    new_intervals = []
+    for i, param_val in enumerate(params):
+        l, u = intervals[i]
+        interval_range = (u - l)
+        offset = ((1/M) * interval_range) / 2
+        new_l = np.clip(param_val-offset, l, u)
+        new_h = np.clip(param_val+offset, l, u)
+        new_intervals += [(new_l, new_h)]
+    return new_intervals
+
+# global_random_search_2 returns (float, [float])
+# fst is the lowest function value achieved
+# snd is the list of parameter values
+def grs2(intervals, N, M, f, c, eps):
+    # intervals :: [(l, u)]
+    
+    # Nresults :: [(float, [float])]
+    # fst is the lowest function value achieved
+    # snd is the list of parameter values
+    Nresults = []
+
+    # unzip list of tuples
+    l = [l for l, u in intervals]
+    u = [u for l, u in intervals]
+
+    # sample and run N times
+    for s in range(N):
+        r = np.random.uniform(l, u) 
+        v = f(r)
+        Nresults += [(v.copy(), r.copy())]
+
+    # topM :: [(float, [float])]
+    topM = take_top(M, Nresults)
+    if (c-1 == 0):
+        return topM[0]
+
+    # when c = 0 do the pulse
+
+    # collect the top results from applying grs to topM
+    # top_params :: [(float, [float])]
+    top_params = []
+    for (_, params) in topM:
+        new_intervals = get_new_intervals(params, intervals, M/eps)
+        top_params += [global_random_search_2(new_intervals, N, M, f, c-1, eps)]
+
+    return take_top(1, top_params)[0]
+#+end_src
+
+*** Notes :noexport:
+
+Perhaps gives the ones that are more far apart more leeway
+Perhaps analyses the continuity
+Nestrovs estimate of derivative
+
+10 samples, take 3 points
+for those 3 points sample 10 around the range, this will be 30 samples.
+take 3 points for each of those 3 points, this will be 9 points
+for those 9 points sample 10 around the neighbourhood, this will be 90 points
+
+- 3 points-> 30 samples - 9 points> 90 samples -> 27 -> 270 samp
+
+
+Can make one that pulses upwards and assigns and gets rid of the children that are clearly not good ones
+ - take to L of the pulsed up children
+   - perhaps after 2 downward ones
+
+- had ideas for nesterov
+  - to use momentum of good random searches
+
+- if there is a continuity priroritiese that
+  - kind of light momentum    
+
+- choose in a circle around the point
+  - on the radius
+
+** (ii) Modifed Global Random Search on $f_1$ and $f_2$
+alpha and x0 will be kept the same for both function on GD because the intervals will also be kept the same for GRS. 
+
+countour plots of the cost functions
+- choices of parameter values vs time for these algorithms
+  - compare
+
+*** $f_1$
+
+#+begin_src python :results replace :exports both :tangle ./Week8Src.py
+intervals = [(-10, 10), (-10, 10)]
+testGRS2(intervals, N=100, M=3, f=f1, c=2, eps=1, runs=100)
+#+end_src
+
+*** $f_2$
+On $f_2$, because there the minimum is not so narroa on a -10,10 scale, GRS can land at function value of 0.5 a lot of the time. GD is very well behaved on this function since it is concave-like, and reaches the minmum a lot in a lot faster than 100 iterations.
+
+#+begin_src python :results replace :exports both :tangle ./Week8Src.py
+intervals = [(-10, 10), (-10, 10)]
+testGRS2(intervals, N=100, M=3, f=f2, c=2, eps=1, runs=100)
+#+end_src
+
+*** Notes                                                          :noexport:
+*** Code                                                           :noexport:
+**** Test GRS Code
+
+#+begin_src python :results none :exports none :tangle ./Week8Src.py
+def testGRS2(intervals, N, M, f, c, eps, runs):
+    r = []
+    for i in range(runs):
+        r += [global_random_search_2(intervals, N, M, f, c, eps)[0]]
+
+    print(runs, "runs of GRS2")
+    print("Standard deviation on final function values: ", np.std(r))
+    print("Mean on final function values: ", np.mean(r))
+#+end_src
+
+**** GRS O(N^M)
+***** f1
+#+begin_src python :results replace :exports code :tangle ./Week8Src.py
+intervals = [(-100, 100), (-100, 100)]
+f = global_random_search_2(intervals, 100, 3, f1, 4, 1)
+print(f)
+#+end_src
+
+#+RESULTS:
+: (0.0002615082978431637, array([8.916017  , 8.99526148]))
+
+***** f2
+#+begin_src python :results replace :exports code :tangle ./Week8Src.py
+intervals = [(-100, 100), (-100, 100)]
+%timeit f = global_random_search_2(intervals, 100, 3, f2, 4, 1)
+print(f)
+#+end_src
+
+#+RESULTS:
+: 60.6 ms ± 849 µs per loop (mean ± std. dev. of 7 runs, 10 loops each)
+: (0.0012449965389231322, array([9.09131069, 8.98560245]))
+
+**** GRS O(N*M)
+***** f2
+#+begin_src python :results replace :exports code :tangle ./Week8Src.py
+intervals = [(-100, 100), (-100, 100)]
+f = grs3(intervals, 100, 3, f2, 4, 1)
+print(f)
+#+end_src
+
+#+RESULTS:
+: (0.0007634970468206603, array([-86.46584282,   9.0001527 ]))
+
+***** f1
+#+begin_src python :results replace :exports code :tangle ./Week8Src.py
+
+intervals = [(-100, 100), (-100, 100)]
+%timeit f = grs3(intervals, 100, 3, f1, 4, 1)
+print(f)
+#+end_src
+
+#+RESULTS:
+: 14.1 ms ± 157 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+: (0.0012449965389231322, array([9.09131069, 8.98560245]))
+
+* (c) Global Random Search to Choose Hyperparameters on Conv Net
+
+Applying random search to choose hyperparameters for conv net.
+Hyperparams are:
+- Mini-batch size: $b$
+- Adam parameters: $\alpha, \beta_1, \beta_2$
+- Number of epochs: $n$
+  
+** Code                                                            :noexport:
+*** Imports and Setting Up Data
+
+#+begin_src python :results none :exports none :tangle ./Week8Src.py
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers, regularizers
+from keras.layers import Dense, Dropout, Activation, Flatten, BatchNormalization
+from keras.layers import Conv2D, MaxPooling2D, LeakyReLU
+from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.utils import shuffle
+import matplotlib.pyplot as plt
+plt.rc('font', size=18)
+plt.rcParams['figure.constrained_layout.use'] = True
+import sys
+
+# Model / data parameters
+num_classes = 10
+input_shape = (32, 32, 3)
+
+# the data, split between train and test sets
+(x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
+n=5000
+x_train = x_train[1:n]; y_train=y_train[1:n]
+#x_test=x_test[1:500]; y_test=y_test[1:500]
+
+# Scale images to the [0, 1] range
+x_train = x_train.astype("float32") / 255
+x_test = x_test.astype("float32") / 255
+print("orig x_train shape:", x_train.shape)
+
+# convert class vectors to binary class matrices
+y_train = keras.utils.to_categorical(y_train, num_classes)
+y_test = keras.utils.to_categorical(y_test, num_classes)
+#+end_src
+
+*** Training Model
+
+#+begin_src python :results replace :exports none :tangle ./Week8Src.py
+use_saved_model = False
+if use_saved_model:
+	model = keras.models.load_model("cifar.model")
+else:
+	model = keras.Sequential()
+	model.add(Conv2D(16, (3,3), padding='same', input_shape=x_train.shape[1:],activation='relu'))
+	model.add(Conv2D(16, (3,3), strides=(2,2), padding='same', activation='relu'))
+	model.add(Conv2D(32, (3,3), padding='same', activation='relu'))
+	model.add(Conv2D(32, (3,3), strides=(2,2), padding='same', activation='relu'))
+	model.add(Dropout(0.5))
+	model.add(Flatten())
+	model.add(Dense(num_classes, activation='softmax',kernel_regularizer=regularizers.l1(0.0001)))
+	model.compile(loss="categorical_crossentropy", optimizer='adam', metrics=["accuracy"])
+	model.summary()
+
+	batch_size = 128
+	epochs = 20
+	history = model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, validation_split=0.1)
+	model.save("cifar.model")
+	plt.subplot(211)
+	plt.plot(history.history['accuracy'])
+	plt.plot(history.history['val_accuracy'])
+	plt.title('model accuracy')
+	plt.ylabel('accuracy')
+	plt.xlabel('epoch')
+	plt.legend(['train', 'val'], loc='upper left')
+	plt.subplot(212)
+	plt.plot(history.history['loss'])
+	plt.plot(history.history['val_loss'])
+	plt.title('model loss')
+	plt.ylabel('loss'); plt.xlabel('epoch')
+	plt.legend(['train', 'val'], loc='upper left')
+	plt.show()
+
+preds = model.predict(x_train)
+y_pred = np.argmax(preds, axis=1)
+y_train1 = np.argmax(y_train, axis=1)
+print(classification_report(y_train1, y_pred))
+print(confusion_matrix(y_train1,y_pred))
+
+preds = model.predict(x_test)
+y_pred = np.argmax(preds, axis=1)
+y_test1 = np.argmax(y_test, axis=1)
+print(classification_report(y_test1, y_pred))
+print(confusion_matrix(y_test1,y_pred))
+#+end_src
+
+** Notes                                                           :noexport:
+
+* Appendix
+** Code Listing
+#+begin_export latex
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\lstinputlisting[language=Python]{Week8Src.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/Algorithms.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/DataType.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/Function.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/Plotting.py}
+\lstinputlisting[language=Python]{./OptimisationAlgorithmToolkit/__init__.py}
+%\inputminted{Python}{Week2Src.py}
+#+end_export

@@ -78,7 +78,8 @@ def get_title(alg_name, records, meta):
     params = params - varied
     
     for p in params:
-        title += f' {p}={r[p]}'
+        if p in r:
+            title += f' {p}={r[p]}'
     return title
 
 def create_labels(records):

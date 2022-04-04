@@ -318,6 +318,7 @@ Dfx2 = finite_diff(fN, x, 1) # w.r.t x2
 #+end_src
 
 * (b) Optimising f
+- 25 datapoints are used for function $f$
 ** (i) Gradient Descent with Constant Step-Size
 
 A value of alpha of 0.085 is picked such that the gradient descent gets stuck in the local minimum, but an alpha a bit higher will cause it to escape. Perhaps the SGD will demonstrate that it will be able to escape it.
@@ -366,20 +367,7 @@ We can see that the algorithm can walk around at the local mimimum, and then esc
 
 In Fig \ref{fig:sgdcy} we can see that the y value gets quite close to the minimum value, but perhaps the function is quite volatile at the small bowl due its size and then it gets a batch/gradient that allows it to jump out.
 
-In gradient descent, it is stuck chattering at a predictable, preiodic fashion, this is because the gradients stay the same for the x1 and x2's the algorithm finds itself at (also because it's a circle it doesn't have to exactly loop in the same 2 places for a perfect period, just on the the same distance from the center). Whereas the chattering seen in \ref{fig:sgdcy} is not periodic at all due to the varying approximate derivatives due to the random sampling of the data that constructs the function.
-
-#+begin_export latex
-\begin{figure}[htb]
-\centering
-\captionbox{\label{fig:sgdcc}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcc.png}}
-\captionbox{\label{fig:sgdcy}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcy.png}}\\[2ex]
-\captionbox{\label{fig:sgdcc2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcc2.png}}
-\captionbox{\label{fig:sgdcy2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcy2.png}}\\[2ex]
-\captionbox{\label{fig:sgdcc3}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcc3.png}}
-\captionbox{\label{fig:sgdcy3}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcy3.png}}\\[2ex]
-\end{figure}
-\clearpage
-#+end_export
+In gradient descent, it is stuck chattering at a predictable, preiodic fashion, this is because the gradients stay the same for the x1 and x2's the algorithm finds itself at. Whereas the chattering seen in \ref{fig:sgdcy} is not periodic at all due to the varying approximate derivatives due to the random sampling of the data that constructs the function.
 
 *** Code :noexport:
 
@@ -427,18 +415,10 @@ ploty(copy.deepcopy(o))
 #+end_src
 
 ** (iii) Varying Mini-Batch Size on SGD
-Figs \ref{fig:sgdccb}, \ref{fig:sgdccb2}, \ref{fig:sgdccb3} shows various runs with various batch sizes. Batch size of 1 almost always escapse the local minimum, batch size 25 (out of 25 data points) never escapes. While batch sizes 5 and 10 sometimes escape.
+Figs Run 1 = (\ref{fig:sgdccb}, \ref{fig:sgdcyb}), Run 2 = (\ref{fig:sgdccb2}, \ref{fig:sgdcyb2}), Run 3 = (\ref{fig:sgdccb3}, \ref{fig:sgdcyb3}) shows various runs with various batch sizes. Batch size of 1 almost always escapse the local minimum, batch size 25 (out of 25 data points) never escapes. While batch sizes 5 and 10 sometimes escape.
 
-Could probably plot stats across many runs.
-#+begin_export latex
-\begin{figure}[htb]
-\centering
-\captionbox{\label{fig:sgdccb}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdccb.png}}
-\captionbox{\label{fig:sgdccb2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdccb2.png}}\\[2ex]
-\captionbox{\label{fig:sgdccb3}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdccb3.png}}
-\end{figure}
-\clearpage
-#+end_export
+The point at which $x$ converges varies with batch size as the approximate gradient gets more and more noisy the smaller the batch size. In this case, all that is needed for it to converge to the globabl minimum is to get outside the local minimum. There is a higher chance that the algorithm will escape the local minimum when there is a lot of noise.
+Smaller batch sizes will encourage escape from narrow optimum points, which is a good thing as once the model is used on unseen data, that narrow point may be subject to change. In other words, it doesn't take much variance in the data to change a narrow parts of a function. Where as a large areas of a minimum might be a place where noise won't affect it as much.
 
 *** Code :noexport:
 #+begin_src python :results none :exports none :tangle ./Week6Src.py
@@ -458,7 +438,7 @@ plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
 #+end_src
 
 #+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcyb.png
-ploty(copy.deepcopy(o))
+ploty(copy.deepcopy(o)).semilogy()
 #+end_src
 
 #+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdccb2.png
@@ -468,9 +448,9 @@ x2s = np.linspace(-20, 5, 50)
 plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
 #+end_src
 
-#+RESULTS:
-[[file:./images_week6/sgdccb2.png]]
-
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcyb2.png
+ploty(copy.deepcopy(o)).semilogy()
+#+end_src
 
 #+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdccb3.png
 o = ConstantStep.run()
@@ -479,28 +459,54 @@ x2s = np.linspace(-20, 5, 50)
 plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
 #+end_src
 
-#+RESULTS:
-[[file:./images_week6/sgdccb3.png]]
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcyb3.png
+ploty(copy.deepcopy(o)).semilogy()
+#+end_src
 
 ** (iv) Varying Step Size on SGD
-Figs \ref{fig:sgdccb}.
-Each alpha has the ability to overcome dips of a range of steepness, the range varied by the batch size.
-Alpha=0.05 doesnt seem like it has a chance to walk out of the local minimum. Whereas alpha=0.085 sometimes does, and alpha=0.1 almost always does. Alpha=0.5 copmletely jumps over so the dip is not even relevant for it.
-Although not sure about the analogy of the range being the variance induced by batch size, as we saw batch size of 1 make it out almost always. Perhpas the degree of variance in the behavour really depends on the nature of the static component of the derivative fo the function.
+Figs Run 1 = (\ref{fig:sgdcca}, \ref{fig:sgdcya}), Run 2 = (\ref{fig:sgdcca2}, \ref{fig:sgdcya2}), Run 3 = (\ref{fig:sgdcca3}, \ref{fig:sgdcya3})
+Alpha=0.06 doesnt seems like it has a miniscule chance to walk out of the local minimum. Whereas alpha=0.085 sometimes does, and alpha=0.1 almost always does.
+
+The smaller alphas move too slowly around the local minimum and therfore the many iterations that happen under it average out too fast into the local minimum bowl. Whereas the higher the alpha the less affected they the averaging affect, and need less successive lucky gradients to get out.
+
 #+begin_export latex
 \begin{figure}[htb]
 \centering
+\captionbox{\label{fig:sgdcc}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcc.png}}
+\captionbox{\label{fig:sgdcy}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcy.png}}\\[2ex]
+\captionbox{\label{fig:sgdcc2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcc2.png}}
+\captionbox{\label{fig:sgdcy2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcy2.png}}\\[2ex]
+\captionbox{\label{fig:sgdcc3}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcc3.png}}
+\captionbox{\label{fig:sgdcy3}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcy3.png}}\\[2ex]
+\end{figure}
+\clearpage
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:sgdccb}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdccb.png}}
+\captionbox{\label{fig:sgdcyb}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcyb.png}}\\[2ex]
+\captionbox{\label{fig:sgdccb2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdccb2.png}}
+\captionbox{\label{fig:sgdcyb2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcyb2.png}}\\[2ex]
+\captionbox{\label{fig:sgdccb3}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdccb3.png}}
+\captionbox{\label{fig:sgdcyb3}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcyb3.png}}\\[2ex]
+\end{figure}
+\clearpage
+\begin{figure}[htb]
+\centering
 \captionbox{\label{fig:sgdcca}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcca.png}}
-% \captionbox{\label{fig:sgdccb2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdccb2.png}}\\[2ex]
-% \captionbox{\label{fig:sgdccb3}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdccb3.png}}
+\captionbox{\label{fig:sgdcya}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcya.png}}\\[2ex]
+\captionbox{\label{fig:sgdcca2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcca2.png}}
+\captionbox{\label{fig:sgdcya2}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcya2.png}}\\[2ex]
+\captionbox{\label{fig:sgdcca3}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcca3.png}}
+\captionbox{\label{fig:sgdcya3}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdcya3.png}}\\[2ex]
 \end{figure}
 \clearpage
 #+end_export
 
+*** Code :noexport:
 #+begin_src python :results none :exports none :tangle ./Week6Src.py
 bf = BatchedFunction(f, M)
 o = ConstantStep.set_parameters(x0 = np.array([3, 3]),
-                                alpha =[0.05, 0.085, 0.1, 0.5],
+                                alpha =[0.06, 0.085, 0.1],
                                 f = bf,
                                 iters=30,
                                 b=5).run()
@@ -513,105 +519,215 @@ x2s = np.linspace(-20, 5, 50)
 plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
 #+end_src
 
-#+RESULTS:
-[[file:./images_week6/sgdcca.png]]
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcya.png
+ploty(copy.deepcopy(o)).semilogy()
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcca2.png
+o = ConstantStep.run()
+x1s = np.linspace(-20, 5, 50)
+x2s = np.linspace(-20, 5, 50)
+plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcya2.png
+ploty(copy.deepcopy(o)).semilogy()
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcca3.png
+o = ConstantStep.run()
+x1s = np.linspace(-20, 5, 50)
+x2s = np.linspace(-20, 5, 50)
+plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdcya3.png
+ploty(copy.deepcopy(o)).semilogy()
+#+end_src
 
 * (c) Mini-Batch SGD with Different Step Calculations
-- Polyak: \ref{fig:sgdp}
-- RMSProp: \ref{fig:sgdrms}
-- Heavy Ball: \ref{fig:sgdhb}
-- Adam: \ref{fig:sgda}
-
-#+begin_export latex
-\begin{figure}[htb]
-\centering
-\captionbox{\label{fig:sgdp}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdp.png}}
-\captionbox{\label{fig:sgdrms}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdrms.png}}\\[2ex]
-\captionbox{\label{fig:sgdhb}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdhb.png}}
-\captionbox{\label{fig:sgda}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgda.png}}\\[2ex]
-\end{figure}
-\clearpage
-#+end_export
-
+- Select apropriate step size and explain choice.
+- How do these different algorithms affect how f and x change over time.
+- How is behaviour affected by choice of mini-batch size.
+- Can use constant step size results from (b) as baseline comparison.
+  
 ** (i) Polyak Step Size
+No matter the batch size, the amount of variance between runs on the output is very high on polyak is very high. A lot of times it fails to escape local minimum. Opposite to constant step, polyak runs seemed to have a high variance with higher b. Figs \ref{fig:sgdpc} \ref{fig:sgdpy}
+  
+*** Code :noexport:
 #+begin_src python :results none :exports none :tangle ./Week6Src.py
 bf = BatchedFunction(f, M)
 o = Polyak.set_parameters(x0 = np.array([3, 3]),
                           f = bf,
-                          iters=60,
+                          iters=20,
                           f_star=0,
-                          eps=0.0001,
-                          b=5).run()
+                          eps=1e-5,
+                          b=[1, 5, 24, 25]
+                          ).run()
 #+end_src
 
-#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdp.png
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdpc.png
 o = Polyak.run()
 x1s = np.linspace(-20, 5, 50)
 x2s = np.linspace(-20, 5, 50)
 plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
 #+end_src
 
+#+RESULTS:
+[[file:./images_week6/sgdpc.png]]
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdpy.png
+ploty(copy.deepcopy(o)).semilogy()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: []
+[[file:./images_week6/sgdpy.png]]
+:END:
+
+*** Boxplot experiment :noexport:
+
+#+begin_src python :results none :exports none :tangle ./Week6Src.py 
+b1 = []
+b5 = []
+b24 = []
+b25 = []
+for i in range(50):
+    o = copy.deepcopy(Polyak.run())
+    b1 += [o[0]['Y'][-1]]
+    b5 += [o[1]['Y'][-1]]
+    b24 += [o[2]['Y'][-1]]
+    b25 += [o[3]['Y'][-1]]
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py
+print(max(b25))
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py
+plt.boxplot([b1, b5, b24, b25])
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py
+o = Polyak.run()
+# print(o[0]['X'])
+print(o[0]['Y'])
+print(o)
+#+end_src
+
 ** (ii) RMPSProp
+Beta and alpha were picked such that b = len(M) would get stuck in the local minimum. Having b 1 and 5 allowed b=1 to escape the local minimum, but RMSProp would run out of steam when it got to going down the big bowl. Figs \ref{fig:sgdrmsc} \ref{fig:sgdrmsy}
+*** Code :noexport:
 #+begin_src python :results none :exports none :tangle ./Week6Src.py
 bf = BatchedFunction(f, M)
 o = RMSProp.set_parameters(x0 = np.array([3, 3]),
                            f = bf,
                            iters=60,
-                           alpha0=0.085,
-                           beta=0.8,
+                           alpha0=[0.08],
+                           beta=[0.9],
                            eps=0.0001,
-                           b=5).run()
+                           b=[1, 5, 25]).run()
 #+end_src
 
-#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdrms.png
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdrmsc.png
 o = RMSProp.run()
 x1s = np.linspace(-20, 5, 50)
 x2s = np.linspace(-20, 5, 50)
 plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
 #+end_src
 
-** (iii) Heavy Ball
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdrmsy.png
+ploty(copy.deepcopy(o)).semilogy()
+#+end_src
 
+** (iii) Heavy Ball
+A highish beta was picked to see the momentum in action and an alpha that caused b = len(M) to just escape the local minimum. Lowering b e.g 1 and 5, in a lot of runs messes up the heavy balls ability to escape the local minimum, i.e it interrupted the momentum of the heavy ball. Heavy ball can be seen jerked around the local minimum due to the noise and sharp changes, in effect, the noise negating the momentum. Figs \ref{fig:sgdhbc} \ref{fig:sgdhby}
+*** Code :noexport:
 #+begin_src python :results none :exports none :tangle ./Week6Src.py
 bf = BatchedFunction(f,M)
 o = HeavyBall.set_parameters(x0 = np.array([3, 3]),
                            f = bf,
                            iters=60,
-                           alpha=0.085,
-                           beta=0.8,
-                           b=len(M)).run()
+                           alpha=[0.08],
+                           beta=0.9,
+                           b=[1, 5, 25]).run()
 #+end_src
 
-#+begin_src python :results repalce :exports none :tangle ./Week6Src.py
-print(o)
-#+end_src
-
-#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdhb.png
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdhbc.png
 o = HeavyBall.run()
 x1s = np.linspace(-20, 5, 50)
 x2s = np.linspace(-20, 5, 50)
 plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
 #+end_src
 
+#+RESULTS:
+[[file:./images_week6/sgdhbc.png]]
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdhby.png
+ploty(copy.deepcopy(o)).semilogy()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: []
+[[file:./images_week6/sgdhby.png]]
+:END:
+
 ** (iv) Adam
+beta1=0.99, and beta2=0.98 is set to accentuate the components of Adam. b can be seen to have quite a negligable effect. Even though for alpha=2, the full data batch size would be almost escaping, adding noise still doesn't allow it to escape, seems like the 2 averaging components of Adam are negating the effects of the noise of the function. We can see that the b=5 and b=25 are going side by side even on greatly different alphas. Figs \ref{fig:sgdac} \ref{fig:sgday}
+
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:sgdpc}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdpc.png}}
+\captionbox{\label{fig:sgdpy}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdpy.png}}\\[2ex]
+\end{figure}
+\clearpage
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:sgdrmsc}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdrmsc.png}}
+\captionbox{\label{fig:sgdrmsy}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdrmsy.png}}\\[2ex]
+\captionbox{\label{fig:sgdhbc}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdhbc.png}}
+\captionbox{\label{fig:sgdhby}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdhby.png}}\\[2ex]
+\captionbox{\label{fig:sgdac}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgdac.png}}
+\captionbox{\label{fig:sgday}}{\includegraphics[width=\figwidth\textwidth]{images_week6/sgday.png}}\\[2ex]
+\end{figure}
+\clearpage
+#+end_export
+
+*** Code :noexport:
 #+begin_src python :results none :exports none :tangle ./Week6Src.py
 bf = BatchedFunction(f, M)
 o = Adam.set_parameters(x0 = np.array([3, 3]),
                         f = bf,
                         iters=60,
-                        alpha=10,
-                        beta1=0.94,
-                        beta2=0.97,
+                        alpha=[2, 20],
+                        beta1=0.99,
+                        beta2=0.98,
                         eps=0.0001,
-                        b=5).run()
+                        b=[5, 25]).run()
 #+end_src
 
-#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgda.png
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgdac.png
 o = Adam.run()
 x1s = np.linspace(-20, 5, 50)
 x2s = np.linspace(-20, 5, 50)
 plot_contour(copy.deepcopy(o), x1s, x2s, log=True)
 #+end_src
+
+#+RESULTS:
+[[file:./images_week6/sgdac.png]]
+
+#+begin_src python :results replace :exports none :tangle ./Week6Src.py :file ./images_week6/sgday.png
+ploty(copy.deepcopy(o)).semilogy()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: []
+[[file:./images_week6/sgday.png]]
+:END:
 
 * Appendix
 ** Code Listing

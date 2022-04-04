@@ -20,6 +20,7 @@ class FunctionIterator:
         self.i = i
         self.f = f
         self.function = f.function
+        print(SymbolicFunction)
         if type(f) is SymbolicFunction:
             self.batch = False
         else:
@@ -30,6 +31,10 @@ class FunctionIterator:
                 self.b = len(self.M) # act as non stochastic
             else:
                 self.b = b
+            if self.b == len(self.M):
+                self.shuffle = True
+            else:
+                self.shuffle = True
 
     def __iter__(self):
         self.epoch = -1
@@ -41,12 +46,13 @@ class FunctionIterator:
             raise StopIteration
         self.i -= 1
         if not self.batch:
-            return self.function, f.partial_derivatives
+            return self.function, self.f.partial_derivatives
         
         self.batch_index = next(self.batch_start_indices, None)
         if self.batch_index == None:
             self.epoch += 1
-            np.random.shuffle(self.M)
+            if self.shuffle:
+                np.random.shuffle(self.M)
             self.batch_start_indices = iter(np.arange(0, (self.m-self.b)+1, self.b))
             self.batch_index = next(self.batch_start_indices, None)
 
@@ -62,6 +68,7 @@ class SymbolicFunction:
         
         self.sympy_function = sympy_function
         self.function = lambdify(sympy_symbols, sympy_function, modules="numpy")
+        self.function_list_arg = lambda x: self.function(x[0], x[1])
 
         self.sympy_partial_derivatives = [sympy_function.diff(symbol) for symbol in sympy_symbols]
         self.partial_derivatives = [lambdify(sympy_symbols, p, modules="numpy") for p in self.sympy_partial_derivatives]

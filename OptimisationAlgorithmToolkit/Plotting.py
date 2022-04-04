@@ -10,6 +10,7 @@ from matplotlib.ticker import LogLocator
 
 import numpy as np
 
+
 def plot_contour(records, x1r, x2r, log=False, sym=False):
     create_labels(records)
     t = get_titles(records)

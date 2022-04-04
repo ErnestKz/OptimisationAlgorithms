@@ -7,7 +7,68 @@
 
 import numpy as np
 
+
 from OptimisationAlgorithmToolkit.Function import FunctionIterator
+
+class OptimisationAlgorithm:
+    def __init__(self, algorithm, algorithm_name):
+        self.algorithm = algorithm
+        self.algorithm_name = algorithm_name
+        
+        arguments = algorithm.__code__.co_varnames[:algorithm.__code__.co_argcount]
+        self.mini_batch_parameters = ('b')
+        self.all_parameters = arguments
+        self.standard_parameters = ("x0", "f", "iters")
+        self.hyperparameters = list(filter(lambda arg: arg not in self.standard_parameters, arguments))
+
+    def __type_check_parameters(self, input_record):
+        for key in input_record.keys():
+            if key not in self.all_parameters:
+                raise NameError(key + " is not one of: " + str(self.all_parameters))
+        for key in self.all_parameters:
+            if key not in input_record:
+                if key is not "b":
+                    raise NameError(key + " is missing from input: " + str(list(input_record.keys())))
+            
+    def set_parameters(self, **input_record):
+        self.__type_check_parameters(input_record)
+        self.parameter_values = input_record
+        return self
+
+    def run(self):
+        inputs = self.__make_input()
+        for input in inputs:
+            input["X"], input["Y"] = self.algorithm(**input)
+            input["X"] = np.array(input["X"])
+            input["Y"] = np.array(input["Y"])
+            input["algorithm"] = self
+        return inputs
+
+    def __make_input(self):
+        kwargs = self.parameter_values.copy()
+        expected_vector = { "x0" }
+        for key, value in kwargs.items():
+            if key in expected_vector:
+                value = np.array(value)
+                if value.ndim == 1:
+                    kwargs[key] = [value]
+            else:
+                if type(value) is not list:
+                    kwargs[key] = [value]
+
+        keys = kwargs.keys()
+        partial_dicts = [{}]
+        for key in keys:
+            partial_dicts_new = []
+            for partial_dict in partial_dicts:
+                for value in kwargs[key]: # making a new partial dict for each value
+                    partial_dict_new = partial_dict.copy()
+                    partial_dict_new[key] = value
+                    partial_dicts_new += [partial_dict_new]
+                    partial_dicts = partial_dicts_new
+        return partial_dicts
+
+
 
 def polyak(x0, f, f_star, eps, iters, b=None):
     fi = FunctionIterator(f, b, iters) ; f = f.function ; x = x0 ; X = [x] ; Y = [f(*x)]
@@ -101,64 +162,3 @@ def adam(x0, f, eps, beta1, beta2, alpha, iters, b=None):
 Adam = OptimisationAlgorithm(algorithm=adam,
                              algorithm_name="Adam")
 
-class OptimisationAlgorithm:
-    def __init__(self, algorithm, algorithm_name, batched=False):
-        self.algorithm = algorithm
-        self.algorithm_name = algorithm_name
-        self.batched = batched
-        
-        arguments = algorithm.__code__.co_varnames[:algorithm.__code__.co_argcount]
-        self.mini_batch_parameters = ('b')
-        self.all_parameters = arguments
-        if (self.batched):
-            self.all_parameters += self.mini_batch_parameters
-        self.standard_parameters = ("x0", "f", "iters")
-        self.hyperparameters = list(filter(lambda arg: arg not in self.standard_parameters, arguments))
-
-    def __type_check_parameters(self, input_record):
-        for key in input_record.keys():
-            if key not in self.all_parameters:
-                raise NameError(key + " is not one of: " + str(self.all_parameters))
-        for key in self.all_parameters:
-            if key not in input_record:
-                raise NameError(key + " is missing from input: " + str(list(input_record.keys())))
-            
-    def set_parameters(self, **input_record):
-        self.__type_check_parameters(input_record)
-        self.parameter_values = input_record
-        return self
-
-    def run(self):
-        inputs = self.__make_input()
-        for input in inputs:
-            input["X"], input["Y"] = self.algorithm(**input)
-            input["X"] = np.array(input["X"])
-            input["Y"] = np.array(input["Y"])
-            input["algorithm"] = self
-        return inputs
-
-    def __make_input(self):
-        kwargs = self.parameter_values.copy()
-        expected_vector = { "x0" }
-        if self.batched:
-            expected_vector.add("b")
-        for key, value in kwargs.items():
-            if key in expected_vector:
-                value = np.array(value)
-                if value.ndim == 1:
-                    kwargs[key] = [value]
-            else:
-                if type(value) is not list:
-                    kwargs[key] = [value]
-
-        keys = kwargs.keys()
-        partial_dicts = [{}]
-        for key in keys:
-            partial_dicts_new = []
-            for partial_dict in partial_dicts:
-                for value in kwargs[key]: # making a new partial dict for each value
-                    partial_dict_new = partial_dict.copy()
-                    partial_dict_new[key] = value
-                    partial_dicts_new += [partial_dict_new]
-                    partial_dicts = partial_dicts_new
-        return partial_dicts
