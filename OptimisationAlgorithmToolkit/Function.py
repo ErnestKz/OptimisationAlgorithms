@@ -20,7 +20,6 @@ class FunctionIterator:
         self.i = i
         self.f = f
         self.function = f.function
-        print(SymbolicFunction)
         if type(f) is SymbolicFunction:
             self.batch = False
         else:

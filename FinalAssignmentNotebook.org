@@ -1,0 +1,285 @@
+#+AUTHOR:Ernests Kuznecovs - 17332791 - kuznecoe@tcd.ie
+#+Date:2021-2022
+#+Title:Optimisation Algorithms - Final Assignment
+
+#+begin_export latex
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+#+end_export
+
+* Preamble                                                         :noexport:
+#+PROPERTY: header-args:python :session fa
+#+PROPERTY: header-args:python+ :async yes
+#+PROPERTY: header-args:python+ :eval never-export
+#+PROPERTY: header-args:elisp :eval never-export
+#+EXCLUDE_TAGS: noexport
+
+#+LaTeX_HEADER: \usepackage{listings}
+#+LaTeX_HEADER: \usepackage{xcolor}
+#+LaTeX_HEADER: \usepackage{minted}
+#+LaTeX_HEADER: \usepackage[a4paper, total={6.7in, 10.5in}]{geometry}
+
+#+LaTeX_HEADER: \usepackage{caption}
+#+LaTeX_HEADER: \newcommand\figwidth{0.48}
+
+#+begin_src elisp :results none :exports none
+(setq-local org-image-actual-width '(512))
+(setq-local org-confirm-babel-evaluate nil)
+(setq-local org-src-preserve-indentation 't)
+
+(setq org-latex-listings t)
+(setq org-latex-prefer-user-labels t)
+#+end_src
+
+#+begin_src elisp :results none :exports none
+(use-package jupyter
+  :config
+  (org-babel-do-load-languages 'org-babel-load-languages '((emacs-lisp . t)
+							   (python . t)
+							   (jupyter . t)))
+  (org-babel-jupyter-override-src-block "python")
+  (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images)
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((emacs-lisp . t)
+     (python . t)
+     (jupyter . t))))
+#+end_src
+
+* Python Imports                                                   :noexport:
+
+#+begin_src python :results none :exports none :tangle ./FinalSrc.py
+import matplotlib as mpl
+mpl.rcParams['figure.dpi'] = 200
+mpl.rcParams['figure.facecolor'] = '1'
+import matplotlib.pyplot as plt
+plt.style.use('seaborn-white')
+
+import copy
+import numpy as np
+from sklearn import metrics
+#+end_src
+
+* Flax, Jax, Optax Examples                                        :noexport:
+
+** Flax
+#+begin_src python :results none :exports none :tangle ./FinalSrc.py
+from typing import Sequence
+
+import numpy as np
+import jax
+import jax.numpy as jnp
+import flax.linen as nn
+
+class MLP(nn.Module):
+  features: Sequence[int]
+
+  @nn.compact
+  def __call__(self, x):
+    for feat in self.features[:-1]:
+      x = nn.relu(nn.Dense(feat)(x))
+    x = nn.Dense(self.features[-1])(x)
+    return x
+
+model = MLP([12, 8, 4])
+batch = jnp.ones((32, 10))
+variables = model.init(jax.random.PRNGKey(0), batch)
+output = model.apply(variables, batch)
+#+end_src
+
+** Optax
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+import random
+from typing import Tuple
+
+import optax
+import jax.numpy as jnp
+import jax
+import numpy as np
+
+BATCH_SIZE = 5
+NUM_TRAIN_STEPS = 1_000
+RAW_TRAINING_DATA = np.random.randint(255, size=(NUM_TRAIN_STEPS, BATCH_SIZE, 1))
+
+TRAINING_DATA = np.unpackbits(RAW_TRAINING_DATA.astype(np.uint8), axis=-1)
+LABELS = jax.nn.one_hot(RAW_TRAINING_DATA % 2, 2).astype(jnp.float32).reshape(NUM_TRAIN_STEPS, BATCH_SIZE, 2)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+initial_params = {
+    'hidden': jax.random.normal(shape=[8, 32], key=jax.random.PRNGKey(0)),
+    'output': jax.random.normal(shape=[32, 2], key=jax.random.PRNGKey(1)),
+}
+
+
+def net(x: jnp.ndarray, params: jnp.ndarray) -> jnp.ndarray:
+  x = jnp.dot(x, params['hidden'])
+  x = jax.nn.relu(x)
+  x = jnp.dot(x, params['output'])
+  return x
+
+
+def loss(params: optax.Params, batch: jnp.ndarray, labels: jnp.ndarray) -> jnp.ndarray:
+  y_hat = net(batch, params)
+
+  # optax also provides a number of common loss functions.
+  loss_value = optax.sigmoid_binary_cross_entropy(y_hat, labels).sum(axis=-1)
+
+  return loss_value.mean()
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+def fit(params: optax.Params, optimizer: optax.GradientTransformation) -> optax.Params:
+  opt_state = optimizer.init(params)
+
+  @jax.jit
+  def step(params, opt_state, batch, labels):
+    loss_value, grads = jax.value_and_grad(loss)(params, batch, labels)
+    updates, opt_state = optimizer.update(grads, opt_state, params)
+    params = optax.apply_updates(params, updates)
+    return params, opt_state, loss_value
+
+  for i, (batch, labels) in enumerate(zip(TRAINING_DATA, LABELS)):
+    params, opt_state, loss_value = step(params, opt_state, batch, labels)
+    if i % 100 == 0:
+      print(f'step {i}, loss: {loss_value}')
+
+  return params
+
+# Finally, we can fit our parametrized function using the Adam optimizer
+# provided by optax.
+optimizer = optax.adam(learning_rate=1e-2)
+optimizer2 = optax.sgd(learning_rate=1e-2)
+params = fit(initial_params, optimizer)
+params = fit(initial_params, optimizer2)
+#+end_src
+
+* Assignment                                                       :noexport:
+
+- Need to complete declaration.
+- Include code as text.
+- Porgrams should be running code.
+- Reports should be 5 pages, 10 pages upper limit
+
+
+- Comparing performance of SGD with
+  - Adam
+  - Constant Step size
+
+    
+- To do this need to make important choices.
+
+  
+  - How to measure performance.
+    - e.g plot ML loss function vs optimisation iterations
+      - use lowest value as performance measure
+	- but this measures performance on training data, not on unseen (non-generalised)
+    - e.g measure ML loss function on held-out test data
+    - good idea to look at both measures
+
+  - SGD involves randomisation
+    - may be necessary to collect data from several runs
+      - to understand how performance fluctuates from run to run
+
+  - What hyperparameters to use and how to choose them.
+    - Look at performance of both when using
+      - default hyperparameter values
+      - and when using optimised values (global random search?)
+
+  - What ML model and data to use for evaluation.
+    - probably worth 2 models/datasets
+    - at least 1 neural net ML model
+    - MNIST, CIFAR, Imbd
+
+  - Existing examples of performance evaluation
+    - Adam: A Method For Stochastic Optimization
+      - https://arxiv.org/pdf/1412.6980.pdf
+      - Training error vs other algorithms
+    - The Marginal Value of Adaptive Gradient Methods in Machine Learning
+      - https://arxiv.org/pdf/1705.08292.pdf
+      - Test error (i.e generalisaton)
+      - of SGD against a range of algorithms, including Adam
+
+    - Might reflect on, do these papers address choices noted above?
+      - if not, might it be important or not?
+
+* Libraries, Documentation, Resources                              :noexport:
+** Optax - Optimisation Algorithms Library for Jax
+- https://optax.readthedocs.io/en/latest/api.html#sgd
+- https://optax.readthedocs.io/en/latest/api.html#adam
+- https://optax.readthedocs.io/en/latest/
+
+** Flax - Neural Network Library for Jax
+- AiEpiphany
+  - https://www.youtube.com/watch?v=5eUSmJvK8WA&t=13s
+  - https://github.com/gordicaleksa/get-started-with-JAX/blob/main/Tutorial_4_Flax_Zero2Hero_Colab.ipynb
+    
+- https://github.com/google/flax
+  - Can use MNIST, CIFAR10 example
+  
+** Jax
+- https://colinraffel.com/blog/you-don-t-know-jax.html
+- AiEpiphany
+  - Part 1 - https://www.youtube.com/watch?v=SstuvS-tVc0&t=1649s
+  - Part 2 - https://www.youtube.com/watch?v=CQQaifxuFcs&t=62s
+  - Part 3 - https://www.youtube.com/watch?v=6_PqUPxRmjY&t=1155s
+
+* Tasks                                                            :noexport:
+- 2 models/datasets
+  - Flax
+    
+- Devise how to test and how to evaluate.
+* Appendix
+** Code Listing
+#+begin_export latex
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\lstinputlisting[language=Python]{FinalSrc.py}
+#+end_export
