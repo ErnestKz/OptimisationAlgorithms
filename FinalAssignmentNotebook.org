@@ -249,9 +249,9 @@ params = fit(initial_params, optimizer2)
 
 * Tasks                                                            :noexport:
 - Find one more model (text analytics one?)
-  
-- Run multiple times to get list of loss histories
-  - Then compute error bars of the loss histories
+
+- Thread seed throughout the runs.
+- Make plots of the resulting data.
 
 * Notes on Flax, Jax, Optax
 - SGD implemented by chaining in Optax
@@ -457,9 +457,10 @@ def train_and_evaluate(config: ml_collections.ConfigDict,
 def train_and_evaluate(config: ml_collections.ConfigDict,
                        workdir: str,
                        train_ds,
-                       test_ds):
-  rng = jax.random.PRNGKey(0)
-  rng, init_rng = jax.random.split(rng)
+                       test_ds,
+                       seed):
+
+  rng, init_rng = jax.random.split(seed)
   state = create_train_state(init_rng, config)
   
   _, test_loss, test_accuracy = apply_model(state, test_ds['image'], test_ds['label'])
@@ -528,56 +529,9 @@ def global_random_search(intervals, N, f):
 v = global_random_search([(0.001, 0.1), (0.5,0.99), (0.5,0.99), (1, 128)], 20, f)
 #+end_src
 
-#+RESULTS:
-#+begin_example
-iteration: 0 trying out: [0.09498289 0.60721598 0.96816385 5.77365785]
-epoch:  1, train_loss: 2.4407, train_accuracy: 10.09, test_loss: 2.3244, test_accuracy: 9.74
-iteration: 1 trying out: [ 0.01967676  0.70659543  0.94288784 16.91781857]
-epoch:  1, train_loss: 0.2771, train_accuracy: 92.45, test_loss: 0.2462, test_accuracy: 93.29
-iteration: 2 trying out: [ 0.06621171  0.72099497  0.60460773 53.51220874]
-epoch:  1, train_loss: 2.6385, train_accuracy: 10.48, test_loss: 2.3087, test_accuracy: 10.09
-iteration: 3 trying out: [3.00407268e-02 5.67995762e-01 8.97930568e-01 8.84358207e+01]
-epoch:  1, train_loss: 2.3674, train_accuracy: 10.95, test_loss: 2.3025, test_accuracy: 10.09
-iteration: 4 trying out: [ 0.03034571  0.69081222  0.54135383 27.30341413]
-epoch:  1, train_loss: 0.4284, train_accuracy: 90.77, test_loss: 0.4298, test_accuracy: 92.94
-iteration: 5 trying out: [9.54651594e-03 9.05080222e-01 7.26347607e-01 3.80119077e+01]
-epoch:  1, train_loss: 0.1914, train_accuracy: 94.54, test_loss: 0.1038, test_accuracy: 96.80
-iteration: 6 trying out: [1.50627657e-02 5.41365557e-01 5.72977850e-01 8.94787475e+01]
-epoch:  1, train_loss: 0.1848, train_accuracy: 94.77, test_loss: 0.0994, test_accuracy: 97.05
-iteration: 7 trying out: [1.49200146e-03 8.97974129e-01 9.57523196e-01 9.76863517e+01]
-epoch:  1, train_loss: 0.1396, train_accuracy: 95.71, test_loss: 0.0460, test_accuracy: 98.40
-iteration: 8 trying out: [4.88600576e-02 5.78893000e-01 6.66134480e-01 5.37994719e+01]
-epoch:  1, train_loss: 2.4444, train_accuracy: 10.56, test_loss: 2.3070, test_accuracy: 10.09
-iteration: 9 trying out: [3.22257446e-02 5.34966512e-01 8.49675051e-01 3.43241725e+01]
-epoch:  1, train_loss: 2.3417, train_accuracy: 10.59, test_loss: 2.3054, test_accuracy: 10.09
-iteration: 10 trying out: [ 0.08814422  0.66662314  0.68038366 69.40305009]
-epoch:  1, train_loss: 3.4640, train_accuracy: 10.60, test_loss: 2.3076, test_accuracy: 10.09
-iteration: 11 trying out: [9.67306009e-03 8.94031649e-01 9.62538336e-01 4.23363962e+01]
-epoch:  1, train_loss: 0.1310, train_accuracy: 95.98, test_loss: 0.0526, test_accuracy: 98.24
-iteration: 12 trying out: [1.10849748e-03 8.85089227e-01 9.02617084e-01 1.14484117e+02]
-epoch:  1, train_loss: 0.1593, train_accuracy: 95.19, test_loss: 0.0552, test_accuracy: 98.06
-iteration: 13 trying out: [3.11733020e-02 9.38790910e-01 5.43791971e-01 6.86113916e+01]
-epoch:  1, train_loss: 2.9801, train_accuracy: 10.72, test_loss: 2.3050, test_accuracy: 10.09
-iteration: 14 trying out: [4.78196691e-02 7.92862800e-01 7.36652633e-01 6.63318745e+01]
-epoch:  1, train_loss: 0.5027, train_accuracy: 89.28, test_loss: 0.2637, test_accuracy: 92.58
-iteration: 15 trying out: [ 0.09514511  0.5803702   0.63155081 26.10744429]
-epoch:  1, train_loss: 2.5394, train_accuracy: 10.49, test_loss: 2.3240, test_accuracy: 10.10
-iteration: 16 trying out: [6.44511105e-02 7.06136749e-01 8.91964359e-01 1.27586204e+02]
-epoch:  1, train_loss: 0.8502, train_accuracy: 89.59, test_loss: 0.2154, test_accuracy: 94.04
-iteration: 17 trying out: [3.00972902e-02 6.71710049e-01 9.54459350e-01 1.00861255e+02]
-epoch:  1, train_loss: 2.3845, train_accuracy: 10.92, test_loss: 2.3022, test_accuracy: 10.09
-iteration: 18 trying out: [0.06069404 0.89793332 0.56147585 6.14011418]
-epoch:  1, train_loss: 10433.2803, train_accuracy: 10.37, test_loss: 2.3389, test_accuracy: 9.74
-iteration: 19 trying out: [4.18852755e-02 9.14906673e-01 8.48406021e-01 1.04010526e+02]
-epoch:  1, train_loss: 2.4894, train_accuracy: 10.65, test_loss: 2.3032, test_accuracy: 10.28
-#+end_example
-
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
 v
 #+end_src
-
-#+RESULTS:
-| array | (0.04600779 dtype=float32) | array | ((0.00149200146 0.897974129 0.957523196 97.6863517)) |
 
 (0.04600779 dtype=float32) ((0.00149200146 0.897974129 0.957523196 97.6863517))
 global_random_search([(0.001, 0.1), (0.5,0.99), (0.5,0.99), (1, 128)], 20, f)
@@ -594,56 +548,9 @@ function evaluated by error on test values
 v2 = global_random_search([(0.4, 0.8), (40, 90)], 20, f2)
 #+end_src
 
-#+RESULTS:
-#+begin_example
-iteration: 0 trying out: [ 0.55953832 65.88764716]
-epoch:  1, train_loss: 0.1795, train_accuracy: 94.33, test_loss: 0.0689, test_accuracy: 97.73
-iteration: 1 trying out: [ 0.40742066 78.18829847]
-epoch:  1, train_loss: 0.2034, train_accuracy: 93.78, test_loss: 0.0629, test_accuracy: 97.93
-iteration: 2 trying out: [ 0.48917857 48.61637121]
-epoch:  1, train_loss: 0.1881, train_accuracy: 94.15, test_loss: 0.0463, test_accuracy: 98.48
-iteration: 3 trying out: [ 0.57043057 50.54181151]
-epoch:  1, train_loss: 0.1955, train_accuracy: 93.90, test_loss: 0.0485, test_accuracy: 98.40
-iteration: 4 trying out: [ 0.61076742 81.02891856]
-epoch:  1, train_loss: 0.2556, train_accuracy: 92.18, test_loss: 0.0608, test_accuracy: 98.00
-iteration: 5 trying out: [ 0.57903954 59.75461617]
-epoch:  1, train_loss: 0.1844, train_accuracy: 94.30, test_loss: 0.0625, test_accuracy: 97.87
-iteration: 6 trying out: [ 0.49462337 63.32300952]
-epoch:  1, train_loss: 0.1787, train_accuracy: 94.37, test_loss: 0.0553, test_accuracy: 98.15
-iteration: 7 trying out: [ 0.49765613 48.23733849]
-epoch:  1, train_loss: 0.1796, train_accuracy: 94.44, test_loss: 0.0676, test_accuracy: 97.76
-iteration: 8 trying out: [ 0.43409191 83.42276451]
-epoch:  1, train_loss: 0.2032, train_accuracy: 93.76, test_loss: 0.0582, test_accuracy: 98.05
-iteration: 9 trying out: [ 0.66329857 55.58680994]
-epoch:  1, train_loss: 0.1800, train_accuracy: 94.26, test_loss: 0.0466, test_accuracy: 98.37
-iteration: 10 trying out: [ 0.43736516 40.5431808 ]
-epoch:  1, train_loss: 0.1445, train_accuracy: 95.39, test_loss: 0.0496, test_accuracy: 98.29
-iteration: 11 trying out: [ 0.52908237 40.42440148]
-epoch:  1, train_loss: 0.1559, train_accuracy: 95.12, test_loss: 0.0690, test_accuracy: 97.67
-iteration: 12 trying out: [ 0.56054044 86.27810951]
-epoch:  1, train_loss: 0.2092, train_accuracy: 93.45, test_loss: 0.0675, test_accuracy: 97.71
-iteration: 13 trying out: [ 0.51109967 69.7771212 ]
-epoch:  1, train_loss: 0.1857, train_accuracy: 94.10, test_loss: 0.0566, test_accuracy: 98.05
-iteration: 14 trying out: [ 0.62437753 80.04489905]
-epoch:  1, train_loss: 0.3337, train_accuracy: 89.28, test_loss: 0.0775, test_accuracy: 97.48
-iteration: 15 trying out: [ 0.7589336  51.38229871]
-epoch:  1, train_loss: 0.2628, train_accuracy: 91.58, test_loss: 0.0620, test_accuracy: 97.90
-iteration: 16 trying out: [ 0.42258326 51.52417999]
-epoch:  1, train_loss: 0.1600, train_accuracy: 94.98, test_loss: 0.0528, test_accuracy: 98.08
-iteration: 17 trying out: [ 0.69335974 84.99384614]
-epoch:  1, train_loss: 0.2936, train_accuracy: 90.70, test_loss: 0.0634, test_accuracy: 97.89
-iteration: 18 trying out: [ 0.63986219 62.57943355]
-epoch:  1, train_loss: 0.1975, train_accuracy: 93.74, test_loss: 0.0468, test_accuracy: 98.55
-iteration: 19 trying out: [ 0.56126106 49.44887083]
-epoch:  1, train_loss: 0.1682, train_accuracy: 94.66, test_loss: 0.0485, test_accuracy: 98.46
-#+end_example
-
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
 print(v2)
 #+end_src
-
-#+RESULTS:
-: (array(0.04633828, dtype=float32), array([ 0.48917857, 48.61637121]))
 
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
 # (array(0.05145077, dtype=float32), array([ 0.49315356, 58.39919518]))
@@ -675,18 +582,18 @@ plt.plot(range(len(loss_history)), loss_history)
 *** Loss Histories
 
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
-def sgdf(learning_rate, batch_size):
+def sgdf(learning_rate, batch_size, seed):
     opt = optax.sgd(learning_rate=learning_rate)
     cfg = get_config(opt=opt, batch_size=round(batch_size))
-    _, loss_history, test_loss = train_and_evaluate(cfg, "./mnist/", train_ds, test_ds)
+    _, loss_history, test_loss = train_and_evaluate(cfg, "./mnist/", train_ds, test_ds, seed)
     return loss_history, test_loss
 #+end_src
 
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
-def adamf(learning_rate, b1, b2, batch_size):
+def adamf(learning_rate, b1, b2, batch_size, seed):
     opt = optax.adam(learning_rate=learning_rate, b1=b1, b2=b2)
     cfg = get_config(opt=opt, batch_size=round(batch_size))
-    _, loss_history, test_loss = train_and_evaluate(cfg, "./mnist/", train_ds, test_ds)
+    _, loss_history, test_loss = train_and_evaluate(cfg, "./mnist/", train_ds, test_ds, seed)
     return loss_history, test_loss
 #+end_src
 
@@ -697,9 +604,13 @@ def run_multiple(runs, f):
     loss_histories = []
     test_losses = []
 
+    seed = jax.random.PRNGKey(0)
+    seed, subseed = jax.random.split(seed)
+    
     for r in range(runs):
         print("Run number:", r)
-        loss_history, test_loss = f()
+        loss_history, test_loss = f(subseed)
+        seed, subseed = jax.random.split(seed)
         loss_histories += [loss_history]
         test_losses += [test_loss]
     return loss_histories, test_losses
@@ -708,13 +619,13 @@ def run_multiple(runs, f):
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
 sgd_default_alpha = 0.1
 sgd_default_batch = 128
-sgd_default = lambda: sgdf(sgd_default_alpha, sgd_default_batch)
+sgd_default = lambda seed: sgdf(sgd_default_alpha, sgd_default_batch,seed=seed)
 #+end_src
 
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
 sgd_optimal_alpha = 0.489
 sgd_optimal_batch = 49
-sgd_optimal = lambda: sgdf(sgd_optimal_alpha, sgd_optimal_batch)
+sgd_optimal = lambda seed: sgdf(sgd_optimal_alpha, sgd_optimal_batch, seed=seed)
 #+end_src
 
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
@@ -722,7 +633,7 @@ adam_default_alpha = 0.01
 adam_default_b1 = 0.9
 adam_default_b2 = 0.999
 adam_default_batch = 128
-adam_default = lambda: adamf(adam_default_alpha, adam_default_b1, adam_default_b2, adam_default_batch)
+adam_default = lambda seed: adamf(adam_default_alpha, adam_default_b1, adam_default_b2, adam_default_batch, seed=seed)
 #+end_src
 
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
@@ -730,7 +641,7 @@ adam_optimal_alpha = 0.0015
 adam_optimal_b1 = 0.898
 adam_optimal_b2 = 0.9575
 adam_optimal_batch = 98
-adam_optimal = lambda: adamf(adam_optimal_alpha, adam_optimal_b1, adam_optimal_b2, adam_optimal_batch)
+adam_optimal = lambda seed: adamf(adam_optimal_alpha, adam_optimal_b1, adam_optimal_b2, adam_optimal_batch, seed=seed)
 #+end_src
 
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
@@ -740,9 +651,9 @@ sgd_default_loss_histories, sgd_default_test_losses = run_multiple(runs, sgd_def
 
 #+RESULTS:
 : Run number: 0
-: epoch:  1, train_loss: 0.3880, train_accuracy: 88.29, test_loss: 0.1423, test_accuracy: 95.48
+: epoch:  1, train_loss: 0.3981, train_accuracy: 87.79, test_loss: 0.1414, test_accuracy: 95.73
 : Run number: 1
-: epoch:  1, train_loss: 0.3880, train_accuracy: 88.29, test_loss: 0.1423, test_accuracy: 95.48
+: epoch:  1, train_loss: 0.3784, train_accuracy: 88.61, test_loss: 0.1273, test_accuracy: 96.06
 
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
 print(sgd_default_test_losses)
@@ -752,7 +663,7 @@ print(sgd_default_test_losses)
 : [DeviceArray(0.14234129, dtype=float32), DeviceArray(0.14234129, dtype=float32)]
 
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
-runs = 2
+runs = 20
 print("SGD Default")
 sgd_default_loss_histories, sgd_default_test_losses = run_multiple(runs, sgd_default)
 
@@ -765,6 +676,279 @@ adam_default_loss_histories, adam_default_test_losses = run_multiple(runs, adam_
 print("Adam Optimal")
 adam_optimal_loss_histories, adam_optimal_test_losses = run_multiple(runs, adam_optimal)
 #+end_src
+
+#+RESULTS:
+#+begin_example
+SGD Default
+Run number: 0
+epoch:  1, train_loss: 0.3981, train_accuracy: 87.79, test_loss: 0.1414, test_accuracy: 95.73
+Run number: 1
+epoch:  1, train_loss: 0.3784, train_accuracy: 88.61, test_loss: 0.1273, test_accuracy: 96.06
+Run number: 2
+epoch:  1, train_loss: 0.4237, train_accuracy: 87.35, test_loss: 0.1632, test_accuracy: 94.78
+Run number: 3
+epoch:  1, train_loss: 0.3539, train_accuracy: 89.33, test_loss: 0.1257, test_accuracy: 96.44
+Run number: 4
+epoch:  1, train_loss: 0.3998, train_accuracy: 88.01, test_loss: 0.1542, test_accuracy: 95.41
+Run number: 5
+epoch:  1, train_loss: 0.3740, train_accuracy: 88.82, test_loss: 0.1437, test_accuracy: 95.49
+Run number: 6
+epoch:  1, train_loss: 0.3968, train_accuracy: 88.22, test_loss: 0.1557, test_accuracy: 95.35
+Run number: 7
+epoch:  1, train_loss: 0.3883, train_accuracy: 88.23, test_loss: 0.1441, test_accuracy: 95.83
+Run number: 8
+epoch:  1, train_loss: 0.3875, train_accuracy: 88.35, test_loss: 0.1513, test_accuracy: 95.20
+Run number: 9
+epoch:  1, train_loss: 0.3895, train_accuracy: 88.43, test_loss: 0.1448, test_accuracy: 95.60
+Run number: 10
+epoch:  1, train_loss: 0.4019, train_accuracy: 87.81, test_loss: 0.1545, test_accuracy: 95.64
+Run number: 11
+epoch:  1, train_loss: 0.4016, train_accuracy: 88.04, test_loss: 0.1741, test_accuracy: 94.42
+Run number: 12
+epoch:  1, train_loss: 0.4071, train_accuracy: 87.82, test_loss: 0.1484, test_accuracy: 95.60
+Run number: 13
+epoch:  1, train_loss: 0.3744, train_accuracy: 88.69, test_loss: 0.1377, test_accuracy: 95.77
+Run number: 14
+epoch:  1, train_loss: 0.4132, train_accuracy: 87.77, test_loss: 0.1481, test_accuracy: 95.43
+Run number: 15
+epoch:  1, train_loss: 0.3867, train_accuracy: 88.22, test_loss: 0.1412, test_accuracy: 95.61
+Run number: 16
+epoch:  1, train_loss: 0.3887, train_accuracy: 88.21, test_loss: 0.1510, test_accuracy: 95.23
+Run number: 17
+epoch:  1, train_loss: 0.3903, train_accuracy: 88.18, test_loss: 0.1466, test_accuracy: 95.51
+Run number: 18
+epoch:  1, train_loss: 0.3975, train_accuracy: 88.06, test_loss: 0.1474, test_accuracy: 95.28
+Run number: 19
+epoch:  1, train_loss: 0.3768, train_accuracy: 88.77, test_loss: 0.1323, test_accuracy: 95.88
+SGD Optimal
+Run number: 0
+epoch:  1, train_loss: 0.1787, train_accuracy: 94.54, test_loss: 0.0450, test_accuracy: 98.56
+Run number: 1
+epoch:  1, train_loss: 0.1763, train_accuracy: 94.60, test_loss: 0.0640, test_accuracy: 98.02
+Run number: 2
+epoch:  1, train_loss: 0.1735, train_accuracy: 94.42, test_loss: 0.0577, test_accuracy: 98.28
+Run number: 3
+epoch:  1, train_loss: 0.1689, train_accuracy: 94.66, test_loss: 0.0408, test_accuracy: 98.65
+Run number: 4
+epoch:  1, train_loss: 0.1759, train_accuracy: 94.51, test_loss: 0.0511, test_accuracy: 98.26
+Run number: 5
+epoch:  1, train_loss: 0.1687, train_accuracy: 94.79, test_loss: 0.0446, test_accuracy: 98.53
+Run number: 6
+epoch:  1, train_loss: 0.1501, train_accuracy: 95.29, test_loss: 0.0422, test_accuracy: 98.64
+Run number: 7
+epoch:  1, train_loss: 0.1641, train_accuracy: 94.82, test_loss: 0.0408, test_accuracy: 98.70
+Run number: 8
+epoch:  1, train_loss: 0.1698, train_accuracy: 94.64, test_loss: 0.0442, test_accuracy: 98.56
+Run number: 9
+epoch:  1, train_loss: 0.1634, train_accuracy: 94.97, test_loss: 0.0461, test_accuracy: 98.39
+Run number: 10
+epoch:  1, train_loss: 0.1725, train_accuracy: 94.63, test_loss: 0.0478, test_accuracy: 98.45
+Run number: 11
+epoch:  1, train_loss: 0.1657, train_accuracy: 94.84, test_loss: 0.0497, test_accuracy: 98.38
+Run number: 12
+epoch:  1, train_loss: 0.1752, train_accuracy: 94.52, test_loss: 0.0528, test_accuracy: 98.24
+Run number: 13
+lepoch:  1, train_loss: 0.1819, train_accuracy: 94.43, test_loss: 0.0596, test_accuracy: 97.83
+Run number: 14
+epoch:  1, train_loss: 0.1635, train_accuracy: 94.79, test_loss: 0.0369, test_accuracy: 98.71
+Run number: 15
+epoch:  1, train_loss: 0.1792, train_accuracy: 94.25, test_loss: 0.0454, test_accuracy: 98.62
+Run number: 16
+epoch:  1, train_loss: 0.1802, train_accuracy: 94.31, test_loss: 0.0521, test_accuracy: 98.35
+Run number: 17
+epoch:  1, train_loss: 0.1603, train_accuracy: 94.91, test_loss: 0.0408, test_accuracy: 98.71
+Run number: 18
+epoch:  1, train_loss: 0.1742, train_accuracy: 94.43, test_loss: 0.0797, test_accuracy: 97.53
+Run number: 19
+epoch:  1, train_loss: 0.1712, train_accuracy: 94.68, test_loss: 0.0555, test_accuracy: 98.17
+Adam Default
+Run number: 0
+epoch:  1, train_loss: 0.1447, train_accuracy: 95.75, test_loss: 0.0482, test_accuracy: 98.51
+Run number: 1
+epoch:  1, train_loss: 0.1334, train_accuracy: 96.10, test_loss: 0.0526, test_accuracy: 98.30
+Run number: 2
+epoch:  1, train_loss: 0.1259, train_accuracy: 96.19, test_loss: 0.0472, test_accuracy: 98.58
+Run number: 3
+epoch:  1, train_loss: 0.1588, train_accuracy: 95.40, test_loss: 0.0530, test_accuracy: 98.15
+Run number: 4
+epoch:  1, train_loss: 0.1292, train_accuracy: 96.03, test_loss: 0.0546, test_accuracy: 98.31
+Run number: 5
+epoch:  1, train_loss: 0.1361, train_accuracy: 95.94, test_loss: 0.0548, test_accuracy: 98.29
+Run number: 6
+epoch:  1, train_loss: 0.1387, train_accuracy: 95.82, test_loss: 0.0584, test_accuracy: 98.05
+Run number: 7
+epoch:  1, train_loss: 0.1451, train_accuracy: 95.70, test_loss: 0.0456, test_accuracy: 98.52
+Run number: 8
+epoch:  1, train_loss: 0.1372, train_accuracy: 95.91, test_loss: 0.0776, test_accuracy: 97.53
+Run number: 9
+epoch:  1, train_loss: 0.1244, train_accuracy: 96.22, test_loss: 0.0487, test_accuracy: 98.35
+Run number: 10
+epoch:  1, train_loss: 0.1484, train_accuracy: 95.53, test_loss: 0.0434, test_accuracy: 98.69
+Run number: 11
+epoch:  1, train_loss: 0.1226, train_accuracy: 96.25, test_loss: 0.0615, test_accuracy: 98.04
+Run number: 12
+epoch:  1, train_loss: 0.1226, train_accuracy: 96.29, test_loss: 0.0509, test_accuracy: 98.42
+Run number: 13
+epoch:  1, train_loss: 0.1509, train_accuracy: 95.50, test_loss: 0.0464, test_accuracy: 98.48
+Run number: 14
+epoch:  1, train_loss: 0.1116, train_accuracy: 96.61, test_loss: 0.0405, test_accuracy: 98.75
+Run number: 15
+epoch:  1, train_loss: 0.1708, train_accuracy: 94.72, test_loss: 0.0469, test_accuracy: 98.43
+Run number: 16
+epoch:  1, train_loss: 0.1692, train_accuracy: 95.12, test_loss: 0.0573, test_accuracy: 98.17
+Run number: 17
+epoch:  1, train_loss: 0.1255, train_accuracy: 96.12, test_loss: 0.0361, test_accuracy: 98.75
+Run number: 18
+epoch:  1, train_loss: 0.1299, train_accuracy: 96.05, test_loss: 0.0681, test_accuracy: 97.93
+Run number: 19
+epoch:  1, train_loss: 0.1494, train_accuracy: 95.66, test_loss: 0.0419, test_accuracy: 98.62
+Adam Optimal
+Run number: 0
+epoch:  1, train_loss: 0.1473, train_accuracy: 95.55, test_loss: 0.0551, test_accuracy: 98.19
+Run number: 1
+epoch:  1, train_loss: 0.1338, train_accuracy: 95.98, test_loss: 0.0431, test_accuracy: 98.52
+Run number: 2
+epoch:  1, train_loss: 0.1474, train_accuracy: 95.35, test_loss: 0.0396, test_accuracy: 98.73
+Run number: 3
+epoch:  1, train_loss: 0.1379, train_accuracy: 95.78, test_loss: 0.0427, test_accuracy: 98.64
+Run number: 4
+epoch:  1, train_loss: 0.1459, train_accuracy: 95.52, test_loss: 0.0494, test_accuracy: 98.51
+Run number: 5
+epoch:  1, train_loss: 0.1370, train_accuracy: 95.88, test_loss: 0.0471, test_accuracy: 98.46
+Run number: 6
+epoch:  1, train_loss: 0.1419, train_accuracy: 95.64, test_loss: 0.0476, test_accuracy: 98.32
+Run number: 7
+epoch:  1, train_loss: 0.1455, train_accuracy: 95.68, test_loss: 0.0414, test_accuracy: 98.55
+Run number: 8
+epoch:  1, train_loss: 0.1477, train_accuracy: 95.55, test_loss: 0.0522, test_accuracy: 98.26
+Run number: 9
+epoch:  1, train_loss: 0.1424, train_accuracy: 95.73, test_loss: 0.0490, test_accuracy: 98.39
+Run number: 10
+epoch:  1, train_loss: 0.1469, train_accuracy: 95.44, test_loss: 0.0410, test_accuracy: 98.71
+Run number: 11
+epoch:  1, train_loss: 0.1389, train_accuracy: 95.77, test_loss: 0.0491, test_accuracy: 98.43
+Run number: 12
+epoch:  1, train_loss: 0.1440, train_accuracy: 95.72, test_loss: 0.0632, test_accuracy: 97.95
+Run number: 13
+epoch:  1, train_loss: 0.1399, train_accuracy: 95.72, test_loss: 0.0511, test_accuracy: 98.34
+Run number: 14
+epoch:  1, train_loss: 0.1372, train_accuracy: 95.78, test_loss: 0.0379, test_accuracy: 98.73
+Run number: 15
+epoch:  1, train_loss: 0.1505, train_accuracy: 95.41, test_loss: 0.0412, test_accuracy: 98.66
+Run number: 16
+epoch:  1, train_loss: 0.1487, train_accuracy: 95.37, test_loss: 0.0524, test_accuracy: 98.32
+Run number: 17
+epoch:  1, train_loss: 0.1397, train_accuracy: 95.71, test_loss: 0.0372, test_accuracy: 98.80
+Run number: 18
+epoch:  1, train_loss: 0.1400, train_accuracy: 95.62, test_loss: 0.0601, test_accuracy: 98.05
+Run number: 19
+epoch:  1, train_loss: 0.1379, train_accuracy: 95.87, test_loss: 0.0385, test_accuracy: 98.61
+#+end_example
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+from matplotlib import pyplot as plt
+import numpy as np
+
+x = np.linspace(0, 30, 30)
+y = np.sin(x/6*np.pi)
+error = np.random.normal(0.1, 0.02, size=y.shape)
+y += np.random.normal(0, 0.1, size=y.shape)
+
+plt.plot(x, y, 'k-')
+plt.fill_between(x, y-error, y+error)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: <matplotlib.collections.PolyCollection at 0x7fda2ef49f10>
+[[file:./.ob-jupyter/a853ecaadfc69c4d8b31611103eefe1b029e6423.png]]
+:END:
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+sgd_default_loss_histories
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+import pickle
+
+mlruns = {
+    "sgd_default_loss_histories": sgd_default_loss_histories,
+    "sgd_default_test_losses": sgd_default_test_losses,
+    "sgd_optimal_loss_histories": sgd_optimal_loss_histories,
+    "sgd_optimal_test_losses": sgd_optimal_test_losses,
+    
+    "adam_default_loss_histories": adam_default_loss_histories,
+    "adam_default_test_losses": adam_default_test_losses,
+    "adam_optimal_loss_histories": adam_optimal_loss_histories,
+    "adam_optimal_test_losses": adam_optimal_test_losses
+}
+
+pickle.dump(mlruns, open("mlruns.p", "wb"))
+#+end_src
+
+#+RESULTS:
+
+*** Loading and Plotting
+
+#+begin_src python :results none :exports none :tangle ./FinalSrc.py
+mlruns_l = pickle.load(open( "mlruns.p", "rb" ))
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+mlruns_l.keys()
+#+end_src
+
+#+RESULTS:
+: dict_keys(['sgd_default_loss_histories', 'sgd_default_test_losses', 'sgd_optimal_loss_histories', 'sgd_optimal_test_losses', 'adam_default_loss_histories', 'adam_default_test_losses', 'adam_optimal_loss_histories', 'adam_optimal_test_losses'])
+
+Will need min and max of each iteration.
+
+plot(iter, average_on_iter_i)
+fill_between(iter, min_on_iter_i, max_on_iter_i)
+
+#+begin_src python :results none :exports none :tangle ./FinalSrc.py
+def plot_history(losses):
+    'losses :: [[float]], ith element is loss vs iteration of ith run of the SGD'
+    losses = np.array(losses)
+    average_on_iter_i = np.mean(losses, axis=0)
+    min_on_iter_i = np.minimum.reduce(losses)
+    max_on_iter_i = np.maximum.reduce(losses)
+    x = range(len(average_on_iter_i))
+    plt.plot(x, average_on_iter_i , 'k-')
+    plt.fill_between(x, min_on_iter_i, max_on_iter_i)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+plot_history(mlruns_l['sgd_default_loss_histories'])
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/80e3daa8d256acf2cee14dddaadc9ea602bfdc5b.png]]
+
+
+
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+plot_history(mlruns_l['sgd_optimal_loss_histories'])
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/9027c71677b7a5e14b1ebd118594da5242748775.png]]
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+plot_history(mlruns_l['adam_default_loss_histories'])
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/5931f9ada70394d02c879dbfc922869ebf087ff0.png]]
+
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+plot_history(mlruns_l['adam_optimal_loss_histories'])
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/dc20e17b130a9ec3a426e7ab99532bb09fdfd8ed.png]]
 
 ** sst-2
 
