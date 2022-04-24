@@ -250,12 +250,14 @@ params = fit(initial_params, optimizer2)
 * Tasks                                                            :noexport:
 - Find one more model (text analytics one?)
 
-- Thread seed throughout the runs.
-- Make plots of the resulting data.
+- Can start writing prose for MNIST
+  - params
+  - make plots look nice
+  - talk about plots
 
-* Notes on Flax, Jax, Optax
+* Notes on Flax, Jax, Optax                                        :noexport:
 - SGD implemented by chaining in Optax
-
+  
 * Tests and Evaluation                                             :noexport:
 ** Characteristics of the Domain
 - Constant vs Adam
@@ -572,13 +574,10 @@ print(len(loss_history))
 print(len(train_ds['label'])/128)
 #+end_src
 
-#+RESULTS:
-: 468
-: 468.75
-
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
 plt.plot(range(len(loss_history)), loss_history)
 #+end_src
+
 *** Loss Histories
 
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
@@ -649,18 +648,9 @@ runs = 2
 sgd_default_loss_histories, sgd_default_test_losses = run_multiple(runs, sgd_default)
 #+end_src
 
-#+RESULTS:
-: Run number: 0
-: epoch:  1, train_loss: 0.3981, train_accuracy: 87.79, test_loss: 0.1414, test_accuracy: 95.73
-: Run number: 1
-: epoch:  1, train_loss: 0.3784, train_accuracy: 88.61, test_loss: 0.1273, test_accuracy: 96.06
-
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
 print(sgd_default_test_losses)
 #+end_src
-
-#+RESULTS:
-: [DeviceArray(0.14234129, dtype=float32), DeviceArray(0.14234129, dtype=float32)]
 
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
 runs = 20
@@ -675,197 +665,6 @@ adam_default_loss_histories, adam_default_test_losses = run_multiple(runs, adam_
 
 print("Adam Optimal")
 adam_optimal_loss_histories, adam_optimal_test_losses = run_multiple(runs, adam_optimal)
-#+end_src
-
-#+RESULTS:
-#+begin_example
-SGD Default
-Run number: 0
-epoch:  1, train_loss: 0.3981, train_accuracy: 87.79, test_loss: 0.1414, test_accuracy: 95.73
-Run number: 1
-epoch:  1, train_loss: 0.3784, train_accuracy: 88.61, test_loss: 0.1273, test_accuracy: 96.06
-Run number: 2
-epoch:  1, train_loss: 0.4237, train_accuracy: 87.35, test_loss: 0.1632, test_accuracy: 94.78
-Run number: 3
-epoch:  1, train_loss: 0.3539, train_accuracy: 89.33, test_loss: 0.1257, test_accuracy: 96.44
-Run number: 4
-epoch:  1, train_loss: 0.3998, train_accuracy: 88.01, test_loss: 0.1542, test_accuracy: 95.41
-Run number: 5
-epoch:  1, train_loss: 0.3740, train_accuracy: 88.82, test_loss: 0.1437, test_accuracy: 95.49
-Run number: 6
-epoch:  1, train_loss: 0.3968, train_accuracy: 88.22, test_loss: 0.1557, test_accuracy: 95.35
-Run number: 7
-epoch:  1, train_loss: 0.3883, train_accuracy: 88.23, test_loss: 0.1441, test_accuracy: 95.83
-Run number: 8
-epoch:  1, train_loss: 0.3875, train_accuracy: 88.35, test_loss: 0.1513, test_accuracy: 95.20
-Run number: 9
-epoch:  1, train_loss: 0.3895, train_accuracy: 88.43, test_loss: 0.1448, test_accuracy: 95.60
-Run number: 10
-epoch:  1, train_loss: 0.4019, train_accuracy: 87.81, test_loss: 0.1545, test_accuracy: 95.64
-Run number: 11
-epoch:  1, train_loss: 0.4016, train_accuracy: 88.04, test_loss: 0.1741, test_accuracy: 94.42
-Run number: 12
-epoch:  1, train_loss: 0.4071, train_accuracy: 87.82, test_loss: 0.1484, test_accuracy: 95.60
-Run number: 13
-epoch:  1, train_loss: 0.3744, train_accuracy: 88.69, test_loss: 0.1377, test_accuracy: 95.77
-Run number: 14
-epoch:  1, train_loss: 0.4132, train_accuracy: 87.77, test_loss: 0.1481, test_accuracy: 95.43
-Run number: 15
-epoch:  1, train_loss: 0.3867, train_accuracy: 88.22, test_loss: 0.1412, test_accuracy: 95.61
-Run number: 16
-epoch:  1, train_loss: 0.3887, train_accuracy: 88.21, test_loss: 0.1510, test_accuracy: 95.23
-Run number: 17
-epoch:  1, train_loss: 0.3903, train_accuracy: 88.18, test_loss: 0.1466, test_accuracy: 95.51
-Run number: 18
-epoch:  1, train_loss: 0.3975, train_accuracy: 88.06, test_loss: 0.1474, test_accuracy: 95.28
-Run number: 19
-epoch:  1, train_loss: 0.3768, train_accuracy: 88.77, test_loss: 0.1323, test_accuracy: 95.88
-SGD Optimal
-Run number: 0
-epoch:  1, train_loss: 0.1787, train_accuracy: 94.54, test_loss: 0.0450, test_accuracy: 98.56
-Run number: 1
-epoch:  1, train_loss: 0.1763, train_accuracy: 94.60, test_loss: 0.0640, test_accuracy: 98.02
-Run number: 2
-epoch:  1, train_loss: 0.1735, train_accuracy: 94.42, test_loss: 0.0577, test_accuracy: 98.28
-Run number: 3
-epoch:  1, train_loss: 0.1689, train_accuracy: 94.66, test_loss: 0.0408, test_accuracy: 98.65
-Run number: 4
-epoch:  1, train_loss: 0.1759, train_accuracy: 94.51, test_loss: 0.0511, test_accuracy: 98.26
-Run number: 5
-epoch:  1, train_loss: 0.1687, train_accuracy: 94.79, test_loss: 0.0446, test_accuracy: 98.53
-Run number: 6
-epoch:  1, train_loss: 0.1501, train_accuracy: 95.29, test_loss: 0.0422, test_accuracy: 98.64
-Run number: 7
-epoch:  1, train_loss: 0.1641, train_accuracy: 94.82, test_loss: 0.0408, test_accuracy: 98.70
-Run number: 8
-epoch:  1, train_loss: 0.1698, train_accuracy: 94.64, test_loss: 0.0442, test_accuracy: 98.56
-Run number: 9
-epoch:  1, train_loss: 0.1634, train_accuracy: 94.97, test_loss: 0.0461, test_accuracy: 98.39
-Run number: 10
-epoch:  1, train_loss: 0.1725, train_accuracy: 94.63, test_loss: 0.0478, test_accuracy: 98.45
-Run number: 11
-epoch:  1, train_loss: 0.1657, train_accuracy: 94.84, test_loss: 0.0497, test_accuracy: 98.38
-Run number: 12
-epoch:  1, train_loss: 0.1752, train_accuracy: 94.52, test_loss: 0.0528, test_accuracy: 98.24
-Run number: 13
-lepoch:  1, train_loss: 0.1819, train_accuracy: 94.43, test_loss: 0.0596, test_accuracy: 97.83
-Run number: 14
-epoch:  1, train_loss: 0.1635, train_accuracy: 94.79, test_loss: 0.0369, test_accuracy: 98.71
-Run number: 15
-epoch:  1, train_loss: 0.1792, train_accuracy: 94.25, test_loss: 0.0454, test_accuracy: 98.62
-Run number: 16
-epoch:  1, train_loss: 0.1802, train_accuracy: 94.31, test_loss: 0.0521, test_accuracy: 98.35
-Run number: 17
-epoch:  1, train_loss: 0.1603, train_accuracy: 94.91, test_loss: 0.0408, test_accuracy: 98.71
-Run number: 18
-epoch:  1, train_loss: 0.1742, train_accuracy: 94.43, test_loss: 0.0797, test_accuracy: 97.53
-Run number: 19
-epoch:  1, train_loss: 0.1712, train_accuracy: 94.68, test_loss: 0.0555, test_accuracy: 98.17
-Adam Default
-Run number: 0
-epoch:  1, train_loss: 0.1447, train_accuracy: 95.75, test_loss: 0.0482, test_accuracy: 98.51
-Run number: 1
-epoch:  1, train_loss: 0.1334, train_accuracy: 96.10, test_loss: 0.0526, test_accuracy: 98.30
-Run number: 2
-epoch:  1, train_loss: 0.1259, train_accuracy: 96.19, test_loss: 0.0472, test_accuracy: 98.58
-Run number: 3
-epoch:  1, train_loss: 0.1588, train_accuracy: 95.40, test_loss: 0.0530, test_accuracy: 98.15
-Run number: 4
-epoch:  1, train_loss: 0.1292, train_accuracy: 96.03, test_loss: 0.0546, test_accuracy: 98.31
-Run number: 5
-epoch:  1, train_loss: 0.1361, train_accuracy: 95.94, test_loss: 0.0548, test_accuracy: 98.29
-Run number: 6
-epoch:  1, train_loss: 0.1387, train_accuracy: 95.82, test_loss: 0.0584, test_accuracy: 98.05
-Run number: 7
-epoch:  1, train_loss: 0.1451, train_accuracy: 95.70, test_loss: 0.0456, test_accuracy: 98.52
-Run number: 8
-epoch:  1, train_loss: 0.1372, train_accuracy: 95.91, test_loss: 0.0776, test_accuracy: 97.53
-Run number: 9
-epoch:  1, train_loss: 0.1244, train_accuracy: 96.22, test_loss: 0.0487, test_accuracy: 98.35
-Run number: 10
-epoch:  1, train_loss: 0.1484, train_accuracy: 95.53, test_loss: 0.0434, test_accuracy: 98.69
-Run number: 11
-epoch:  1, train_loss: 0.1226, train_accuracy: 96.25, test_loss: 0.0615, test_accuracy: 98.04
-Run number: 12
-epoch:  1, train_loss: 0.1226, train_accuracy: 96.29, test_loss: 0.0509, test_accuracy: 98.42
-Run number: 13
-epoch:  1, train_loss: 0.1509, train_accuracy: 95.50, test_loss: 0.0464, test_accuracy: 98.48
-Run number: 14
-epoch:  1, train_loss: 0.1116, train_accuracy: 96.61, test_loss: 0.0405, test_accuracy: 98.75
-Run number: 15
-epoch:  1, train_loss: 0.1708, train_accuracy: 94.72, test_loss: 0.0469, test_accuracy: 98.43
-Run number: 16
-epoch:  1, train_loss: 0.1692, train_accuracy: 95.12, test_loss: 0.0573, test_accuracy: 98.17
-Run number: 17
-epoch:  1, train_loss: 0.1255, train_accuracy: 96.12, test_loss: 0.0361, test_accuracy: 98.75
-Run number: 18
-epoch:  1, train_loss: 0.1299, train_accuracy: 96.05, test_loss: 0.0681, test_accuracy: 97.93
-Run number: 19
-epoch:  1, train_loss: 0.1494, train_accuracy: 95.66, test_loss: 0.0419, test_accuracy: 98.62
-Adam Optimal
-Run number: 0
-epoch:  1, train_loss: 0.1473, train_accuracy: 95.55, test_loss: 0.0551, test_accuracy: 98.19
-Run number: 1
-epoch:  1, train_loss: 0.1338, train_accuracy: 95.98, test_loss: 0.0431, test_accuracy: 98.52
-Run number: 2
-epoch:  1, train_loss: 0.1474, train_accuracy: 95.35, test_loss: 0.0396, test_accuracy: 98.73
-Run number: 3
-epoch:  1, train_loss: 0.1379, train_accuracy: 95.78, test_loss: 0.0427, test_accuracy: 98.64
-Run number: 4
-epoch:  1, train_loss: 0.1459, train_accuracy: 95.52, test_loss: 0.0494, test_accuracy: 98.51
-Run number: 5
-epoch:  1, train_loss: 0.1370, train_accuracy: 95.88, test_loss: 0.0471, test_accuracy: 98.46
-Run number: 6
-epoch:  1, train_loss: 0.1419, train_accuracy: 95.64, test_loss: 0.0476, test_accuracy: 98.32
-Run number: 7
-epoch:  1, train_loss: 0.1455, train_accuracy: 95.68, test_loss: 0.0414, test_accuracy: 98.55
-Run number: 8
-epoch:  1, train_loss: 0.1477, train_accuracy: 95.55, test_loss: 0.0522, test_accuracy: 98.26
-Run number: 9
-epoch:  1, train_loss: 0.1424, train_accuracy: 95.73, test_loss: 0.0490, test_accuracy: 98.39
-Run number: 10
-epoch:  1, train_loss: 0.1469, train_accuracy: 95.44, test_loss: 0.0410, test_accuracy: 98.71
-Run number: 11
-epoch:  1, train_loss: 0.1389, train_accuracy: 95.77, test_loss: 0.0491, test_accuracy: 98.43
-Run number: 12
-epoch:  1, train_loss: 0.1440, train_accuracy: 95.72, test_loss: 0.0632, test_accuracy: 97.95
-Run number: 13
-epoch:  1, train_loss: 0.1399, train_accuracy: 95.72, test_loss: 0.0511, test_accuracy: 98.34
-Run number: 14
-epoch:  1, train_loss: 0.1372, train_accuracy: 95.78, test_loss: 0.0379, test_accuracy: 98.73
-Run number: 15
-epoch:  1, train_loss: 0.1505, train_accuracy: 95.41, test_loss: 0.0412, test_accuracy: 98.66
-Run number: 16
-epoch:  1, train_loss: 0.1487, train_accuracy: 95.37, test_loss: 0.0524, test_accuracy: 98.32
-Run number: 17
-epoch:  1, train_loss: 0.1397, train_accuracy: 95.71, test_loss: 0.0372, test_accuracy: 98.80
-Run number: 18
-epoch:  1, train_loss: 0.1400, train_accuracy: 95.62, test_loss: 0.0601, test_accuracy: 98.05
-Run number: 19
-epoch:  1, train_loss: 0.1379, train_accuracy: 95.87, test_loss: 0.0385, test_accuracy: 98.61
-#+end_example
-
-#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
-from matplotlib import pyplot as plt
-import numpy as np
-
-x = np.linspace(0, 30, 30)
-y = np.sin(x/6*np.pi)
-error = np.random.normal(0.1, 0.02, size=y.shape)
-y += np.random.normal(0, 0.1, size=y.shape)
-
-plt.plot(x, y, 'k-')
-plt.fill_between(x, y-error, y+error)
-#+end_src
-
-#+RESULTS:
-:RESULTS:
-: <matplotlib.collections.PolyCollection at 0x7fda2ef49f10>
-[[file:./.ob-jupyter/a853ecaadfc69c4d8b31611103eefe1b029e6423.png]]
-:END:
-
-#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
-sgd_default_loss_histories
 #+end_src
 
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
@@ -886,11 +685,10 @@ mlruns = {
 pickle.dump(mlruns, open("mlruns.p", "wb"))
 #+end_src
 
-#+RESULTS:
-
 *** Loading and Plotting
 
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
+import pickle
 mlruns_l = pickle.load(open( "mlruns.p", "rb" ))
 #+end_src
 
@@ -916,39 +714,107 @@ def plot_history(losses):
     x = range(len(average_on_iter_i))
     plt.plot(x, average_on_iter_i , 'k-')
     plt.fill_between(x, min_on_iter_i, max_on_iter_i)
+
+def avg_max_min(loss_histories):
+    average_on_iter_i = np.mean(loss_histories, axis=0)
+    min_on_iter_i = np.minimum.reduce(loss_histories)
+    max_on_iter_i = np.maximum.reduce(loss_histories)
+    return average_on_iter_i, min_on_iter_i, max_on_iter_i
 #+end_src
 
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
 plot_history(mlruns_l['sgd_default_loss_histories'])
 #+end_src
 
-#+RESULTS:
-[[file:./.ob-jupyter/80e3daa8d256acf2cee14dddaadc9ea602bfdc5b.png]]
-
-
-
-
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
 plot_history(mlruns_l['sgd_optimal_loss_histories'])
 #+end_src
-
-#+RESULTS:
-[[file:./.ob-jupyter/9027c71677b7a5e14b1ebd118594da5242748775.png]]
 
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
 plot_history(mlruns_l['adam_default_loss_histories'])
 #+end_src
 
-#+RESULTS:
-[[file:./.ob-jupyter/5931f9ada70394d02c879dbfc922869ebf087ff0.png]]
-
-
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
 plot_history(mlruns_l['adam_optimal_loss_histories'])
 #+end_src
 
+
+- Fix the axis
+- Scale the x axis to datapoints used.  
+
+- Is larger batch size faster to get through the epoch?
+
+
+
+
+
+the x will be real numbers then
+np.linspace(start, stop, num)
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+np.array(mlruns_l['sgd_default_loss_histories']).shape
+#+end_src
+
 #+RESULTS:
-[[file:./.ob-jupyter/dc20e17b130a9ec3a426e7ab99532bb09fdfd8ed.png]]
+| 20 | 468 |
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+np.array(mlruns_l['sgd_optimal_loss_histories']).shape
+#+end_src
+
+#+RESULTS:
+| 20 | 1224 |
+
+#+begin_src python :results none :exports none :tangle ./FinalSrc.py
+def compare_sgd(r1, r2):
+    r1 = np.array(r1) ; r2 = np.array(r2)
+    xr = r1.shape[1]  ; xr2 = r2.shape[1]
+    x1 = np.linspace(0, 100, xr)
+    x2 = np.linspace(0, 100, xr2)
+    a1, l1, h1 = avg_max_min(r1)
+    a2, l2, h2 = avg_max_min(r2)
+
+    plt.semilogy(x1, a1 , 'b-')
+    plt.fill_between(x1, l1, h1)
+    xlim = plt.xlim()
+    ylim = plt.ylim()
+    plt.semilogy(x2, a2 , 'k-')
+    plt.fill_between(x2, l2, h2)
+    plt.xlim(xlim)
+    plt.ylim(ylim)
+
+    plt.xlabel(r'%epoch')
+    plt.ylabel(r'loss')
+    # plt.title("default vs optimal")
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+r1 = np.array(mlruns_l['sgd_default_loss_histories'])
+r2 = np.array(mlruns_l['sgd_optimal_loss_histories'])
+
+compare_sgd(r1, r2)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+r1 = np.array(mlruns_l['adam_default_loss_histories'])
+r2 = np.array(mlruns_l['adam_optimal_loss_histories'])
+compare_sgd(r1, r2)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+r1 = np.array(mlruns_l['sgd_optimal_loss_histories'])
+r2 = np.array(mlruns_l['adam_optimal_loss_histories'])
+compare_sgd(r1, r2)
+#+end_src
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+r1 = np.array(mlruns_l['sgd_default_loss_histories'])
+r2 = np.array(mlruns_l['adam_default_loss_histories'])
+compare_sgd(r1, r2)
+#+end_src
+
+Optimal is scaled down to the scale of default.
+Have more datapoints for optimal per x
 
 ** sst-2
 
@@ -1214,6 +1080,66 @@ def train_and_evaluate(config: ml_collections.ConfigDict,
   summary_writer.flush()
   return state
 #+end_src
+
+* Introduction
+** Acomplishments
+The acomplishments of this Assignment are as follows:
+- Doobie
+- Scooby do
+* Stochastic Gradient Descent: Constant and Adam Step Sizes
+
+
+| Constant | Alpha | Batch Size |
+|----------+-------+------------|
+| Default  |   0.1 |        128 |
+| Optimal  | 0.489 |         49 |
+
+| Adam    | Alpha | Batch Size | Beta1 |  Beta2 |
+|---------+-------+------------+-------+--------|
+| Default |  0.01 |        128 |   0.9 |  0.999 |
+| Optimal | 0.015 |         98 | 0.898 | 0.9575 |
+
+
+
+* Report
+** MNIST 
+sgd_default_alpha = 0.1
+sgd_default_batch = 128
+
+sgd_optimal_alpha = 0.489
+sgd_optimal_batch = 49
+
+adam_default_alpha = 0.01
+adam_default_b1 = 0.9
+adam_default_b2 = 0.999
+adam_default_batch = 128
+
+adam_optimal_alpha = 0.0015
+adam_optimal_b1 = 0.898
+adam_optimal_b2 = 0.9575
+adam_optimal_batch = 98
+
+
+Global random search was used to find the optimal hyperparameters.
+20 runs with for each Cosntant step and Adam. Ranges were
+
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+% \captionbox{\label{fig:a1}}{\includegraphics[width=\figwidth\textwidth]{final/a1.png}}
+% \captionbox{\label{fig:a2}}{\includegraphics[width=\figwidth\textwidth]{final/a2.png}}\\[2ex]
+\end{figure}
+\clearpage
+#+end_export
+
+
+
+
+
+
+
+
+
 
 * Appendix
 ** Code Listing
