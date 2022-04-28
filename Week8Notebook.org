@@ -430,6 +430,7 @@ def testGRS(intervals, N, f, runs):
 \clearpage
 #+end_export
 
+
 - Running time?
   - Count in terms of function evaluations
 

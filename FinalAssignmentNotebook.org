@@ -29,62 +29,99 @@
 \lstset{style=mystyle}
 #+end_export
 
-* Preamble                                                         :noexport:
-#+PROPERTY: header-args:python :session fa
-#+PROPERTY: header-args:python+ :async yes
-#+PROPERTY: header-args:python+ :eval never-export
-#+PROPERTY: header-args:elisp :eval never-export
-#+EXCLUDE_TAGS: noexport
-#+STARTUP: overview
-#+LaTeX_HEADER: \usepackage{listings}
-#+LaTeX_HEADER: \usepackage{xcolor}
-#+LaTeX_HEADER: \usepackage{minted}
-#+LaTeX_HEADER: \usepackage[a4paper, total={6.7in, 10.5in}]{geometry}
+* Assignment                                                       :noexport:
 
-#+LaTeX_HEADER: \usepackage{caption}
-#+LaTeX_HEADER: \newcommand\figwidth{0.48}
+- Need to complete declaration.
+- Include code as text.
+- Porgrams should be running code.
+- Reports should be 5 pages, 10 pages upper limit
 
-#+begin_src elisp :results none :exports none
-(setq-local org-image-actual-width '(512))
-(setq-local org-confirm-babel-evaluate nil)
-(setq-local org-src-preserve-indentation 't)
 
-(setq org-latex-listings t)
-(setq org-latex-prefer-user-labels t)
-#+end_src
+- Comparing performance of SGD with
+  - Adam
+  - Constant Step size
 
-#+begin_src elisp :results none :exports none
-(use-package jupyter
-  :config
-  (org-babel-do-load-languages 'org-babel-load-languages '((emacs-lisp . t)
-							   (python . t)
-							   (jupyter . t)))
-  (org-babel-jupyter-override-src-block "python")
-  (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images)
-  (org-babel-do-load-languages
-   'org-babel-load-languages
-   '((emacs-lisp . t)
-     (python . t)
-     (jupyter . t))))
-#+end_src
+    
+- To do this need to make important choices.
 
-* Python Imports                                                   :noexport:
+  
+  - How to measure performance.
+    - e.g plot ML loss function vs optimisation iterations
+      - use lowest value as performance measure
+	- but this measures performance on training data, not on unseen (non-generalised)
+    - e.g measure ML loss function on held-out test data
+    - good idea to look at both measures
 
-#+begin_src python :results none :exports none :tangle ./FinalSrc.py
-import matplotlib as mpl
-mpl.rcParams['figure.dpi'] = 200
-mpl.rcParams['figure.facecolor'] = '1'
-import matplotlib.pyplot as plt
-plt.style.use('seaborn-white')
+  - SGD involves randomisation
+    - may be necessary to collect data from several runs
+      - to understand how performance fluctuates from run to run
 
-import copy
-import numpy as np
-from sklearn import metrics
-#+end_src
+  - What hyperparameters to use and how to choose them.
+    - Look at performance of both when using
+      - default hyperparameter values
+      - and when using optimised values (global random search?)
 
-* Flax, Jax, Optax Examples                                        :noexport:
+  - What ML model and data to use for evaluation.
+    - probably worth 2 models/datasets
+    - at least 1 neural net ML model
+    - MNIST, CIFAR, Imbd
 
-** Flax
+  - Existing examples of performance evaluation
+    - Adam: A Method For Stochastic Optimization
+      - https://arxiv.org/pdf/1412.6980.pdf
+      - Training error vs other algorithms
+    - The Marginal Value of Adaptive Gradient Methods in Machine Learning
+      - https://arxiv.org/pdf/1705.08292.pdf
+      - Test error (i.e generalisaton)
+      - of SGD against a range of algorithms, including Adam
+
+    - Might reflect on, do these papers address choices noted above?
+      - if not, might it be important or not?
+
+* Notes on Flax, Jax, Optax                                        :noexport:
+- SGD implemented by chaining in Optax
+- https://github.com/google/flax/tree/main/examples/lm1b
+- https://github.com/google/flax/tree/main/examples/sst2
+** Libraries, Documentation, Resources                             :noexport:
+*** Optax - Optimisation Algorithms Library for Jax
+- https://optax.readthedocs.io/en/latest/api.html#sgd
+- https://optax.readthedocs.io/en/latest/api.html#adam
+- https://optax.readthedocs.io/en/latest/
+
+*** Flax - Neural Network Library for Jax
+- AiEpiphany
+  - https://www.youtube.com/watch?v=5eUSmJvK8WA&t=13s
+  - https://github.com/gordicaleksa/get-started-with-JAX/blob/main/Tutorial_4_Flax_Zero2Hero_Colab.ipynb
+    
+- https://github.com/google/flax
+  - Can use MNIST, CIFAR10 example
+  
+*** Jax
+- https://colinraffel.com/blog/you-don-t-know-jax.html
+- AiEpiphany
+  - Part 1 - https://www.youtube.com/watch?v=SstuvS-tVc0&t=1649s
+  - Part 2 - https://www.youtube.com/watch?v=CQQaifxuFcs&t=62s
+  - Part 3 - https://www.youtube.com/watch?v=6_PqUPxRmjY&t=1155s
+** Evaluations and Visualisation
+
+- Can't really have contour plot without quite a bit of effort.
+  - Would have to look at 2 parameters at a time.
+    - Perhaps see how countour of 2 parameters change over time, as other parameters are changed.
+
+- With default hyperparams:
+
+  - Plot:
+    - Loss Function vs Optimisation Iteration (With error bars perhaps)
+
+  - Boxplot:
+    - Lowest value of loss function as performance measure. (non-generalised)
+    - ML performance on held out data as performance measure. (generalised)
+
+- Data for Plot ad Boxplot can be gethered in the same runs.
+
+
+** Flax, Jax, Optax Examples                                       :noexport:
+*** Flax
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
 from typing import Sequence
 
@@ -109,7 +146,7 @@ variables = model.init(jax.random.PRNGKey(0), batch)
 output = model.apply(variables, batch)
 #+end_src
 
-** Optax
+*** Optax
 
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
 import random
@@ -177,141 +214,69 @@ params = fit(initial_params, optimizer)
 params = fit(initial_params, optimizer2)
 #+end_src
 
-* Assignment                                                       :noexport:
-
-- Need to complete declaration.
-- Include code as text.
-- Porgrams should be running code.
-- Reports should be 5 pages, 10 pages upper limit
 
 
-- Comparing performance of SGD with
-  - Adam
-  - Constant Step size
-
-    
-- To do this need to make important choices.
-
-  
-  - How to measure performance.
-    - e.g plot ML loss function vs optimisation iterations
-      - use lowest value as performance measure
-	- but this measures performance on training data, not on unseen (non-generalised)
-    - e.g measure ML loss function on held-out test data
-    - good idea to look at both measures
-
-  - SGD involves randomisation
-    - may be necessary to collect data from several runs
-      - to understand how performance fluctuates from run to run
-
-  - What hyperparameters to use and how to choose them.
-    - Look at performance of both when using
-      - default hyperparameter values
-      - and when using optimised values (global random search?)
-
-  - What ML model and data to use for evaluation.
-    - probably worth 2 models/datasets
-    - at least 1 neural net ML model
-    - MNIST, CIFAR, Imbd
-
-  - Existing examples of performance evaluation
-    - Adam: A Method For Stochastic Optimization
-      - https://arxiv.org/pdf/1412.6980.pdf
-      - Training error vs other algorithms
-    - The Marginal Value of Adaptive Gradient Methods in Machine Learning
-      - https://arxiv.org/pdf/1705.08292.pdf
-      - Test error (i.e generalisaton)
-      - of SGD against a range of algorithms, including Adam
-
-    - Might reflect on, do these papers address choices noted above?
-      - if not, might it be important or not?
-
-* Libraries, Documentation, Resources                              :noexport:
-** Optax - Optimisation Algorithms Library for Jax
-- https://optax.readthedocs.io/en/latest/api.html#sgd
-- https://optax.readthedocs.io/en/latest/api.html#adam
-- https://optax.readthedocs.io/en/latest/
-
-** Flax - Neural Network Library for Jax
-- AiEpiphany
-  - https://www.youtube.com/watch?v=5eUSmJvK8WA&t=13s
-  - https://github.com/gordicaleksa/get-started-with-JAX/blob/main/Tutorial_4_Flax_Zero2Hero_Colab.ipynb
-    
-- https://github.com/google/flax
-  - Can use MNIST, CIFAR10 example
-  
-** Jax
-- https://colinraffel.com/blog/you-don-t-know-jax.html
-- AiEpiphany
-  - Part 1 - https://www.youtube.com/watch?v=SstuvS-tVc0&t=1649s
-  - Part 2 - https://www.youtube.com/watch?v=CQQaifxuFcs&t=62s
-  - Part 3 - https://www.youtube.com/watch?v=6_PqUPxRmjY&t=1155s
-
-* Tasks                                                            :noexport:
-- Find one more model (text analytics one?)
-
-- Can start writing prose for MNIST
-  - params
-  - make plots look nice
-  - talk about plots
-
-* Notes on Flax, Jax, Optax                                        :noexport:
-- SGD implemented by chaining in Optax
-  
-* Tests and Evaluation                                             :noexport:
-** Characteristics of the Domain
-- Constant vs Adam
-
-- Both have randomness.  
-- Both have batch size.
-
-- Probably constant, common epochs.
-
-- Constant:
-  - Alpha 
-- Adam:
-  - Alpha
-  - Beta1
-  - Beta2
-
-- Default params for Adam:
-  - Alpha = 0.001
-  - Beta1 = 0.9
-  - Beta2 = 0.999
-- Take 0.01 as default for Constant.
 
 
-- Then picking good hyperparameter values.
-  - Global Random Search
-    
-** Evaluations and Visualisation
 
-- Can't really have contour plot without quite a bit of effort.
-  - Would have to look at 2 parameters at a time.
-    - Perhaps see how countour of 2 parameters change over time, as other parameters are changed.
 
-- With default hyperparams:
 
-  - Plot:
-    - Loss Function vs Optimisation Iteration (With error bars perhaps)
 
-  - Boxplot:
-    - Lowest value of loss function as performance measure. (non-generalised)
-    - ML performance on held out data as performance measure. (generalised)
 
-- With optimised hyperparams (Global Random Search):
-  
-  - Same stuff.
 
-- Data for Plot ad Boxplot can be gethered in the same runs.
+* Preamble                                                         :noexport:
+#+PROPERTY: header-args:python :session fa
+#+PROPERTY: header-args:python+ :async yes
+#+PROPERTY: header-args:python+ :eval never-export
+#+PROPERTY: header-args:elisp :eval never-export
+#+EXCLUDE_TAGS: noexport
+#+STARTUP: overview
+#+LaTeX_HEADER: \usepackage{listings}
+#+LaTeX_HEADER: \usepackage{xcolor}
+#+LaTeX_HEADER: \usepackage{minted}
+#+LaTeX_HEADER: \usepackage[a4paper, total={6.7in, 10.5in}]{geometry}
 
-* Datasets and Models                                              :noexport:
-- https://github.com/google/flax/tree/main/examples/lm1b
-- https://github.com/google/flax/tree/main/examples/mnist
-- https://github.com/google/flax/tree/main/examples/sst2
+#+LaTeX_HEADER: \usepackage{caption}
+#+LaTeX_HEADER: \newcommand\figwidth{0.48}
 
+#+begin_src elisp :results none :exports none
+(setq-local org-image-actual-width '(512))
+(setq-local org-confirm-babel-evaluate nil)
+(setq-local org-src-preserve-indentation 't)
+
+(setq org-latex-listings t)
+(setq org-latex-prefer-user-labels t)
+#+end_src
+
+#+begin_src elisp :results none :exports none
+(use-package jupyter
+  :config
+  (org-babel-do-load-languages 'org-babel-load-languages '((emacs-lisp . t)
+							   (python . t)
+							   (jupyter . t)))
+  (org-babel-jupyter-override-src-block "python")
+  (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images)
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((emacs-lisp . t)
+     (python . t)
+     (jupyter . t))))
+#+end_src
+* Python Imports                                                   :noexport:
+#+begin_src python :results none :exports none :tangle ./FinalSrc.py
+import matplotlib as mpl
+mpl.rcParams['figure.dpi'] = 200
+mpl.rcParams['figure.facecolor'] = '1'
+import matplotlib.pyplot as plt
+plt.style.use('seaborn-white')
+
+import copy
+import numpy as np
+from sklearn import metrics
+#+end_src
+* Code of Datasets and Models                                      :noexport:
 ** mnist
-
+*** Model
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
 from absl import logging
 from flax import linen as nn
@@ -364,8 +329,15 @@ def update_model(state, grads):
   return state.apply_gradients(grads=grads)
 #+end_src
 
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+(21 % 20 == 0)
+#+end_src
+
+#+RESULTS:
+: False
+
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
-def train_epoch(state, train_ds, batch_size, rng, loss_history):
+def train_epoch(state, train_ds, batch_size, rng, loss_history, test_loss_history, test_ds):
   """Train for a single epoch."""
   train_ds_size = len(train_ds['image'])
   steps_per_epoch = train_ds_size // batch_size
@@ -376,14 +348,30 @@ def train_epoch(state, train_ds, batch_size, rng, loss_history):
 
   epoch_loss = []
   epoch_accuracy = []
+  print("perms:", len(perms))
+  i = 0
 
+
+  test_images = test_ds['image']
+  test_labels = test_ds['label']
+  train_images = train_ds['image']
+  train_labels = train_ds['label']
+  
   for perm in perms:
+    if (i % 12 == 0):
+        print("iteration", i, "out of", len(perms))
+        grads, loss, accuracy = apply_model(state, test_images, test_labels)
+        test_loss_history.append(loss)
+        grads, loss, accuracy = apply_model(state, train_images, train_labels)
+        loss_history.append(loss)
+        
+    i += 1
     batch_images = train_ds['image'][perm, ...]
     batch_labels = train_ds['label'][perm, ...]
+    
     grads, loss, accuracy = apply_model(state, batch_images, batch_labels)
     state = update_model(state, grads)
     epoch_loss.append(loss)
-    loss_history.append(loss)
     epoch_accuracy.append(accuracy)
 
   train_loss = np.mean(epoch_loss)
@@ -417,46 +405,6 @@ def create_train_state(rng, config):
 
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
 def train_and_evaluate(config: ml_collections.ConfigDict,
-                       workdir: str) -> train_state.TrainState:
-  """Execute model training and evaluation loop.
-  Args:
-    config: Hyperparameter configuration for training and evaluation.
-    workdir: Directory where the tensorboard summaries are written to.
-  Returns:
-    The train state (which includes the `.params`).
-  """
-  train_ds, test_ds = get_datasets()
-  rng = jax.random.PRNGKey(0)
-
-  summary_writer = tensorboard.SummaryWriter(workdir)
-  summary_writer.hparams(dict(config))
-
-  rng, init_rng = jax.random.split(rng)
-  state = create_train_state(init_rng, config)
-
-  for epoch in range(1, config.num_epochs + 1):
-    rng, input_rng = jax.random.split(rng)
-    state, train_loss, train_accuracy = train_epoch(state, train_ds,
-                                                    config.batch_size,
-                                                    input_rng)
-    _, test_loss, test_accuracy = apply_model(state, test_ds['image'],
-                                              test_ds['label'])
-
-    logging.info(
-        'epoch:% 3d, train_loss: %.4f, train_accuracy: %.2f, test_loss: %.4f, test_accuracy: %.2f'
-        % (epoch, train_loss, train_accuracy * 100, test_loss,
-           test_accuracy * 100))
-
-    summary_writer.scalar('train_loss', train_loss, epoch)
-    summary_writer.scalar('train_accuracy', train_accuracy, epoch)
-    summary_writer.scalar('test_loss', test_loss, epoch)
-    summary_writer.scalar('test_accuracy', test_accuracy, epoch)
-  summary_writer.flush()
-  return state
-#+end_src
-
-#+begin_src python :results none :exports none :tangle ./FinalSrc.py
-def train_and_evaluate(config: ml_collections.ConfigDict,
                        workdir: str,
                        train_ds,
                        test_ds,
@@ -471,15 +419,16 @@ def train_and_evaluate(config: ml_collections.ConfigDict,
 
 
   loss_history = []
+  test_loss_history = []
   
   for epoch in range(1, config.num_epochs + 1):
     rng, input_rng = jax.random.split(rng)
-    state, train_loss, train_accuracy = train_epoch(state, train_ds, config.batch_size, input_rng, loss_history)
+    state, train_loss, train_accuracy = train_epoch(state, train_ds, config.batch_size, input_rng, loss_history, test_loss_history, test_ds)
     _, test_loss, test_accuracy = apply_model(state, test_ds['image'], test_ds['label'])
 
     print('epoch:% 3d, train_loss: %.4f, train_accuracy: %.2f, test_loss: %.4f, test_accuracy: %.2f'
           % (epoch, train_loss, train_accuracy * 100, test_loss, test_accuracy * 100))
-  return state, loss_history, test_loss
+  return state, loss_history, test_loss_history
 #+end_src
 
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
@@ -495,6 +444,19 @@ def get_config(opt, batch_size):
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
 train_ds, test_ds = get_datasets()
 #+end_src
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+print(train_ds.keys())
+print(train_ds['image'].shape)
+print(train_ds['label'].shape)
+print(test_ds['label'].shape)
+#+end_src
+
+#+RESULTS:
+: dict_keys(['image', 'label'])
+: (60000, 28, 28, 1)
+: (60000,)
+: (10000,)
 
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
 def f(learning_rate, b1, b2, batch_size):
@@ -584,16 +546,16 @@ plt.plot(range(len(loss_history)), loss_history)
 def sgdf(learning_rate, batch_size, seed):
     opt = optax.sgd(learning_rate=learning_rate)
     cfg = get_config(opt=opt, batch_size=round(batch_size))
-    _, loss_history, test_loss = train_and_evaluate(cfg, "./mnist/", train_ds, test_ds, seed)
-    return loss_history, test_loss
+    _, loss_history, test_loss_history = train_and_evaluate(cfg, "./mnist/", train_ds, test_ds, seed)
+    return loss_history, test_loss_history
 #+end_src
 
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
 def adamf(learning_rate, b1, b2, batch_size, seed):
     opt = optax.adam(learning_rate=learning_rate, b1=b1, b2=b2)
     cfg = get_config(opt=opt, batch_size=round(batch_size))
-    _, loss_history, test_loss = train_and_evaluate(cfg, "./mnist/", train_ds, test_ds, seed)
-    return loss_history, test_loss
+    _, loss_history, test_loss_history = train_and_evaluate(cfg, "./mnist/", train_ds, test_ds, seed)
+    return loss_history, test_loss_history
 #+end_src
 
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
@@ -608,10 +570,10 @@ def run_multiple(runs, f):
     
     for r in range(runs):
         print("Run number:", r)
-        loss_history, test_loss = f(subseed)
+        loss_history, test_loss_history = f(subseed)
         seed, subseed = jax.random.split(seed)
         loss_histories += [loss_history]
-        test_losses += [test_loss]
+        test_losses += [test_loss_history]
     return loss_histories, test_losses
 #+end_src
 
@@ -642,6 +604,227 @@ adam_optimal_b2 = 0.9575
 adam_optimal_batch = 98
 adam_optimal = lambda seed: adamf(adam_optimal_alpha, adam_optimal_b1, adam_optimal_b2, adam_optimal_batch, seed=seed)
 #+end_src
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+rng = jax.random.PRNGKey(0)
+#+end_src
+
+#+RESULTS:
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+sgd_train_loss, sgd_test_loss = sgd_optimal(rng)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+perms: 1224
+iteration 0 out of 1224
+iteration 12 out of 1224
+iteration 24 out of 1224
+iteration 36 out of 1224
+iteration 48 out of 1224
+iteration 60 out of 1224
+iteration 72 out of 1224
+iteration 84 out of 1224
+iteration 96 out of 1224
+iteration 108 out of 1224
+iteration 120 out of 1224
+iteration 132 out of 1224
+iteration 144 out of 1224
+iteration 156 out of 1224
+iteration 168 out of 1224
+iteration 180 out of 1224
+iteration 192 out of 1224
+iteration 204 out of 1224
+iteration 216 out of 1224
+iteration 228 out of 1224
+iteration 240 out of 1224
+iteration 252 out of 1224
+iteration 264 out of 1224
+iteration 276 out of 1224
+iteration 288 out of 1224
+iteration 300 out of 1224
+iteration 312 out of 1224
+iteration 324 out of 1224
+iteration 336 out of 1224
+iteration 348 out of 1224
+iteration 360 out of 1224
+iteration 372 out of 1224
+iteration 384 out of 1224
+iteration 396 out of 1224
+iteration 408 out of 1224
+iteration 420 out of 1224
+iteration 432 out of 1224
+iteration 444 out of 1224
+iteration 456 out of 1224
+iteration 468 out of 1224
+iteration 480 out of 1224
+iteration 492 out of 1224
+iteration 504 out of 1224
+iteration 516 out of 1224
+iteration 528 out of 1224
+iteration 540 out of 1224
+iteration 552 out of 1224
+iteration 564 out of 1224
+iteration 576 out of 1224
+iteration 588 out of 1224
+iteration 600 out of 1224
+iteration 612 out of 1224
+iteration 624 out of 1224
+iteration 636 out of 1224
+iteration 648 out of 1224
+iteration 660 out of 1224
+iteration 672 out of 1224
+iteration 684 out of 1224
+iteration 696 out of 1224
+iteration 708 out of 1224
+iteration 720 out of 1224
+iteration 732 out of 1224
+iteration 744 out of 1224
+iteration 756 out of 1224
+iteration 768 out of 1224
+iteration 780 out of 1224
+iteration 792 out of 1224
+iteration 804 out of 1224
+iteration 816 out of 1224
+iteration 828 out of 1224
+iteration 840 out of 1224
+iteration 852 out of 1224
+iteration 864 out of 1224
+iteration 876 out of 1224
+iteration 888 out of 1224
+iteration 900 out of 1224
+iteration 912 out of 1224
+iteration 924 out of 1224
+iteration 936 out of 1224
+iteration 948 out of 1224
+iteration 960 out of 1224
+iteration 972 out of 1224
+iteration 984 out of 1224
+iteration 996 out of 1224
+iteration 1008 out of 1224
+iteration 1020 out of 1224
+iteration 1032 out of 1224
+iteration 1044 out of 1224
+iteration 1056 out of 1224
+iteration 1068 out of 1224
+iteration 1080 out of 1224
+iteration 1092 out of 1224
+iteration 1104 out of 1224
+iteration 1116 out of 1224
+iteration 1128 out of 1224
+iteration 1140 out of 1224
+iteration 1152 out of 1224
+iteration 1164 out of 1224
+iteration 1176 out of 1224
+iteration 1188 out of 1224
+iteration 1200 out of 1224
+iteration 1212 out of 1224
+epoch:  1, train_loss: 0.1758, train_accuracy: 94.44, test_loss: 0.0553, test_accuracy: 98.09
+#+end_example
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+adam_train_loss, adam_test_loss = adam_optimal(rng)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+perms: 612
+iteration 0 out of 612
+iteration 12 out of 612
+iteration 24 out of 612
+iteration 36 out of 612
+iteration 48 out of 612
+iteration 60 out of 612
+iteration 72 out of 612
+iteration 84 out of 612
+iteration 96 out of 612
+iteration 108 out of 612
+iteration 120 out of 612
+iteration 132 out of 612
+iteration 144 out of 612
+iteration 156 out of 612
+iteration 168 out of 612
+iteration 180 out of 612
+iteration 192 out of 612
+iteration 204 out of 612
+iteration 216 out of 612
+iteration 228 out of 612
+iteration 240 out of 612
+iteration 252 out of 612
+iteration 264 out of 612
+iteration 276 out of 612
+iteration 288 out of 612
+iteration 300 out of 612
+iteration 312 out of 612
+iteration 324 out of 612
+iteration 336 out of 612
+iteration 348 out of 612
+iteration 360 out of 612
+iteration 372 out of 612
+iteration 384 out of 612
+iteration 396 out of 612
+iteration 408 out of 612
+iteration 420 out of 612
+iteration 432 out of 612
+iteration 444 out of 612
+iteration 456 out of 612
+iteration 468 out of 612
+iteration 480 out of 612
+iteration 492 out of 612
+iteration 504 out of 612
+iteration 516 out of 612
+iteration 528 out of 612
+iteration 540 out of 612
+iteration 552 out of 612
+iteration 564 out of 612
+iteration 576 out of 612
+iteration 588 out of 612
+iteration 600 out of 612
+epoch:  1, train_loss: 0.1391, train_accuracy: 95.70, test_loss: 0.0441, test_accuracy: 98.43
+#+end_example
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+sgd_train_loss
+#+end_src
+
+#+RESULTS:
+| DeviceArray | (2.2828484 dtype=float32) | DeviceArray | (2.234858 dtype=float32) | DeviceArray | (2.1311278 dtype=float32) | DeviceArray | (2.2003436 dtype=float32) | DeviceArray | (2.027524 dtype=float32) | DeviceArray | (2.1423109 dtype=float32) | DeviceArray | (2.2272623 dtype=float32) | DeviceArray | (2.0213587 dtype=float32) | DeviceArray | (1.893773 dtype=float32) | DeviceArray | (1.7444363 dtype=float32) | DeviceArray | (1.8546003 dtype=float32) | DeviceArray | (1.6432754 dtype=float32) | DeviceArray | (1.1436485 dtype=float32) | DeviceArray | (2.0040135 dtype=float32) | DeviceArray | (1.8970741 dtype=float32) | DeviceArray | (1.7195089 dtype=float32) | DeviceArray | (1.6735042 dtype=float32) | DeviceArray | (1.6188438 dtype=float32) | DeviceArray | (1.2863649 dtype=float32) | DeviceArray | (1.1209055 dtype=float32) | DeviceArray | (1.0576448 dtype=float32) | DeviceArray | (1.502616 dtype=float32) | DeviceArray | (2.9550805 dtype=float32) | DeviceArray | (2.1796696 dtype=float32) | DeviceArray | (2.0310853 dtype=float32) | DeviceArray | (1.8075048 dtype=float32) | DeviceArray | (1.7189469 dtype=float32) | DeviceArray | (1.8089387 dtype=float32) | DeviceArray | (1.5946734 dtype=float32) | DeviceArray | (1.2916958 dtype=float32) | DeviceArray | (1.3914648 dtype=float32) | DeviceArray | (2.028264 dtype=float32) | DeviceArray | (1.5879799 dtype=float32) | DeviceArray | (0.78572565 dtype=float32) | DeviceArray | (1.3306324 dtype=float32) | DeviceArray | (2.9987547 dtype=float32) | DeviceArray | (2.3354125 dtype=float32) | DeviceArray | (2.0415356 dtype=float32) | DeviceArray | (2.0421762 dtype=float32) | DeviceArray | (1.5083615 dtype=float32) | DeviceArray | (1.1814208 dtype=float32) | DeviceArray | (0.88778996 dtype=float32) | DeviceArray | (0.9781441 dtype=float32) | DeviceArray | (1.0043029 dtype=float32) | DeviceArray | (1.1631813 dtype=float32) | DeviceArray | (0.7642637 dtype=float32) | DeviceArray | (0.6890481 dtype=float32) | DeviceArray | (0.4122909 dtype=float32) | DeviceArray | (0.45716298 dtype=float32) | DeviceArray | (0.79710096 dtype=float32) | DeviceArray | (1.2174096 dtype=float32) | DeviceArray | (1.0835543 dtype=float32) | DeviceArray | (0.6577967 dtype=float32) | DeviceArray | (0.5417379 dtype=float32) | DeviceArray | (0.4426051 dtype=float32) | DeviceArray | (0.46127155 dtype=float32) | DeviceArray | (0.6781538 dtype=float32) | DeviceArray | (0.527346 dtype=float32) | DeviceArray | (0.6902894 dtype=float32) | DeviceArray | (0.87717056 dtype=float32) | DeviceArray | (0.9154132 dtype=float32) | DeviceArray | (0.5000367 dtype=float32) | DeviceArray | (0.33450538 dtype=float32) | DeviceArray | (0.20295666 dtype=float32) | DeviceArray | (0.3684992 dtype=float32) | DeviceArray | (0.37358823 dtype=float32) | DeviceArray | (0.16330285 dtype=float32) | DeviceArray | (0.6634361 dtype=float32) | DeviceArray | (0.8935788 dtype=float32) | DeviceArray | (0.7000828 dtype=float32) | DeviceArray | (0.5947829 dtype=float32) | DeviceArray | (0.23066819 dtype=float32) | DeviceArray | (0.5616595 dtype=float32) | DeviceArray | (0.39256275 dtype=float32) | DeviceArray | (0.39400002 dtype=float32) | DeviceArray | (0.34986946 dtype=float32) | DeviceArray | (0.2465496 dtype=float32) | DeviceArray | (0.46764782 dtype=float32) | DeviceArray | (0.37876338 dtype=float32) | DeviceArray | (0.23836736 dtype=float32) | DeviceArray | (0.13085149 dtype=float32) | DeviceArray | (0.30690223 dtype=float32) | DeviceArray | (0.20661105 dtype=float32) | DeviceArray | (0.17479807 dtype=float32) | DeviceArray | (0.18890733 dtype=float32) | DeviceArray | (0.4067505 dtype=float32) | DeviceArray | (0.24513283 dtype=float32) | DeviceArray | (0.2616001 dtype=float32) | DeviceArray | (0.2475644 dtype=float32) | DeviceArray | (0.34463334 dtype=float32) | DeviceArray | (0.29410404 dtype=float32) | DeviceArray | (0.5465993 dtype=float32) | DeviceArray | (0.5930029 dtype=float32) | DeviceArray | (0.69520456 dtype=float32) | DeviceArray | (0.21377341 dtype=float32) | DeviceArray | (0.38923594 dtype=float32) | DeviceArray | (0.14751148 dtype=float32) | DeviceArray | (0.28868845 dtype=float32) | DeviceArray | (0.2395374 dtype=float32) | DeviceArray | (0.26645258 dtype=float32) | DeviceArray | (0.10879911 dtype=float32) | DeviceArray | (0.23070344 dtype=float32) | DeviceArray | (0.10715397 dtype=float32) | DeviceArray | (0.18227981 dtype=float32) | DeviceArray | (0.28396034 dtype=float32) | DeviceArray | (0.42377123 dtype=float32) | DeviceArray | (0.3644718 dtype=float32) | DeviceArray | (0.20233065 dtype=float32) | DeviceArray | (0.3659301 dtype=float32) | DeviceArray | (0.20206726 dtype=float32) | DeviceArray | (0.31864026 dtype=float32) | DeviceArray | (0.1905703 dtype=float32) | DeviceArray | (0.38737643 dtype=float32) | DeviceArray | (0.24297324 dtype=float32) | DeviceArray | (0.2676911 dtype=float32) | DeviceArray | (0.17441018 dtype=float32) | DeviceArray | (0.04224798 dtype=float32) | DeviceArray | (0.4278664 dtype=float32) | DeviceArray | (0.37353033 dtype=float32) | DeviceArray | (0.2875181 dtype=float32) | DeviceArray | (0.11928667 dtype=float32) | DeviceArray | (0.18328679 dtype=float32) | DeviceArray | (0.24332482 dtype=float32) | DeviceArray | (0.14156553 dtype=float32) | DeviceArray | (0.16688989 dtype=float32) | DeviceArray | (0.28520766 dtype=float32) | DeviceArray | (0.28789157 dtype=float32) | DeviceArray | (0.26762062 dtype=float32) | DeviceArray | (0.34620923 dtype=float32) | DeviceArray | (0.1279597 dtype=float32) | DeviceArray | (0.14277467 dtype=float32) | DeviceArray | (0.3098714 dtype=float32) | DeviceArray | (0.18660396 dtype=float32) | DeviceArray | (0.22115836 dtype=float32) | DeviceArray | (0.24045072 dtype=float32) | DeviceArray | (0.25361428 dtype=float32) | DeviceArray | (0.28804433 dtype=float32) | DeviceArray | (0.3692679 dtype=float32) | DeviceArray | (0.5429632 dtype=float32) | DeviceArray | (0.2715007 dtype=float32) | DeviceArray | (0.19883697 dtype=float32) | DeviceArray | (0.30577388 dtype=float32) | DeviceArray | (0.1758089 dtype=float32) | DeviceArray | (0.10008763 dtype=float32) | DeviceArray | (0.11497264 dtype=float32) | DeviceArray | (0.10351572 dtype=float32) | DeviceArray | (0.35654172 dtype=float32) | DeviceArray | (0.06576617 dtype=float32) | DeviceArray | (0.44930914 dtype=float32) | DeviceArray | (0.15682825 dtype=float32) | DeviceArray | (0.20545377 dtype=float32) | DeviceArray | (0.10628856 dtype=float32) | DeviceArray | (0.05891155 dtype=float32) | DeviceArray | (0.16827482 dtype=float32) | DeviceArray | (0.17759441 dtype=float32) | DeviceArray | (0.20271486 dtype=float32) | DeviceArray | (0.26743785 dtype=float32) | DeviceArray | (0.16842034 dtype=float32) | DeviceArray | (0.07774032 dtype=float32) | DeviceArray | (0.06143083 dtype=float32) | DeviceArray | (0.18803655 dtype=float32) | DeviceArray | (0.03498244 dtype=float32) | DeviceArray | (0.22984232 dtype=float32) | DeviceArray | (0.22330934 dtype=float32) | DeviceArray | (0.2652935 dtype=float32) | DeviceArray | (0.15796976 dtype=float32) | DeviceArray | (0.09467794 dtype=float32) | DeviceArray | (0.27463332 dtype=float32) | DeviceArray | (0.04311109 dtype=float32) | DeviceArray | (0.33866882 dtype=float32) | DeviceArray | (0.20131263 dtype=float32) | DeviceArray | (0.49009722 dtype=float32) | DeviceArray | (0.4673645 dtype=float32) | DeviceArray | (0.7293827 dtype=float32) | DeviceArray | (0.3457872 dtype=float32) | DeviceArray | (0.16816603 dtype=float32) | DeviceArray | (0.18871473 dtype=float32) | DeviceArray | (0.14732343 dtype=float32) | DeviceArray | (0.21263847 dtype=float32) | DeviceArray | (0.24604858 dtype=float32) | DeviceArray | (0.20958972 dtype=float32) | DeviceArray | (0.21295983 dtype=float32) | DeviceArray | (0.30161798 dtype=float32) | DeviceArray | (0.27781937 dtype=float32) | DeviceArray | (0.20468949 dtype=float32) | DeviceArray | (0.19354485 dtype=float32) | DeviceArray | (0.10187972 dtype=float32) | DeviceArray | (0.10129242 dtype=float32) | DeviceArray | (0.1700601 dtype=float32) | DeviceArray | (0.1053126 dtype=float32) | DeviceArray | (0.05750797 dtype=float32) | DeviceArray | (0.06862198 dtype=float32) | DeviceArray | (0.09692398 dtype=float32) | DeviceArray | (0.04134468 dtype=float32) | DeviceArray | (0.2170344 dtype=float32) | DeviceArray | (0.06534007 dtype=float32) | DeviceArray | (0.1659551 dtype=float32) | DeviceArray | (0.404237 dtype=float32) | DeviceArray | (0.23736216 dtype=float32) | DeviceArray | (0.12464711 dtype=float32) | DeviceArray | (0.1087735 dtype=float32) | DeviceArray | (0.10934892 dtype=float32) | DeviceArray | (0.08901504 dtype=float32) | DeviceArray | (0.27841732 dtype=float32) | DeviceArray | (0.21779875 dtype=float32) | DeviceArray | (0.2971239 dtype=float32) | DeviceArray | (0.23917384 dtype=float32) | DeviceArray | (0.19446261 dtype=float32) | DeviceArray | (0.14896528 dtype=float32) | DeviceArray | (0.08662587 dtype=float32) | DeviceArray | (0.0521871 dtype=float32) | DeviceArray | (0.3311277 dtype=float32) | DeviceArray | (0.09828342 dtype=float32) | DeviceArray | (0.10335112 dtype=float32) | DeviceArray | (0.14354022 dtype=float32) | DeviceArray | (0.05392728 dtype=float32) | DeviceArray | (0.18670534 dtype=float32) | DeviceArray | (0.11486939 dtype=float32) | DeviceArray | (0.20843811 dtype=float32) | DeviceArray | (0.11171773 dtype=float32) | DeviceArray | (0.03980465 dtype=float32) | DeviceArray | (0.09573617 dtype=float32) | DeviceArray | (0.08047879 dtype=float32) | DeviceArray | (0.08878385 dtype=float32) | DeviceArray | (0.0665564 dtype=float32) | DeviceArray | (0.19342616 dtype=float32) | DeviceArray | (0.24212737 dtype=float32) | DeviceArray | (0.15050283 dtype=float32) | DeviceArray | (0.1966141 dtype=float32) | DeviceArray | (0.21676406 dtype=float32) | DeviceArray | (0.2129867 dtype=float32) | DeviceArray | (0.23253211 dtype=float32) | DeviceArray | (0.16874835 dtype=float32) | DeviceArray | (0.13365148 dtype=float32) | DeviceArray | (0.14909863 dtype=float32) | DeviceArray | (0.19542475 dtype=float32) | DeviceArray | (0.14699975 dtype=float32) | DeviceArray | (0.10537869 dtype=float32) | DeviceArray | (0.04239796 dtype=float32) | DeviceArray | (0.09089025 dtype=float32) | DeviceArray | (0.11155089 dtype=float32) | DeviceArray | (0.30549657 dtype=float32) | DeviceArray | (0.23676988 dtype=float32) | DeviceArray | (0.14280891 dtype=float32) | DeviceArray | (0.14701793 dtype=float32) | DeviceArray | (0.0709227 dtype=float32) | DeviceArray | (0.12267857 dtype=float32) | DeviceArray | (0.18534736 dtype=float32) | DeviceArray | (0.14382243 dtype=float32) | DeviceArray | (0.13151881 dtype=float32) | DeviceArray | (0.20496745 dtype=float32) | DeviceArray | (0.13230462 dtype=float32) | DeviceArray | (0.03280416 dtype=float32) | DeviceArray | (0.05742705 dtype=float32) | DeviceArray | (0.07412522 dtype=float32) | DeviceArray | (0.23342575 dtype=float32) | DeviceArray | (0.19241129 dtype=float32) | DeviceArray | (0.1747368 dtype=float32) | DeviceArray | (0.19976369 dtype=float32) | DeviceArray | (0.08065673 dtype=float32) | DeviceArray | (0.16497526 dtype=float32) | DeviceArray | (0.15580083 dtype=float32) | DeviceArray | (0.24674213 dtype=float32) | DeviceArray | (0.16231966 dtype=float32) | DeviceArray | (0.09768879 dtype=float32) | DeviceArray | (0.14217548 dtype=float32) | DeviceArray | (0.05732057 dtype=float32) | DeviceArray | (0.02576726 dtype=float32) | DeviceArray | (0.24731442 dtype=float32) | DeviceArray | (0.25074017 dtype=float32) | DeviceArray | (0.40220633 dtype=float32) | DeviceArray | (0.31075117 dtype=float32) | DeviceArray | (0.3489561 dtype=float32) | DeviceArray | (0.34865153 dtype=float32) | DeviceArray | (0.20955272 dtype=float32) | DeviceArray | (0.197905 dtype=float32) | DeviceArray | (0.04803984 dtype=float32) | DeviceArray | (0.06480066 dtype=float32) | DeviceArray | (0.08695962 dtype=float32) | DeviceArray | (0.04363959 dtype=float32) | DeviceArray | (0.15007138 dtype=float32) | DeviceArray | (0.05307176 dtype=float32) | DeviceArray | (0.23594336 dtype=float32) | DeviceArray | (0.08435342 dtype=float32) | DeviceArray | (0.07729267 dtype=float32) | DeviceArray | (0.12176888 dtype=float32) | DeviceArray | (0.12828344 dtype=float32) | DeviceArray | (0.03343906 dtype=float32) | DeviceArray | (0.04577438 dtype=float32) | DeviceArray | (0.17817251 dtype=float32) | DeviceArray | (0.05438708 dtype=float32) | DeviceArray | (0.20291895 dtype=float32) | DeviceArray | (0.1121195 dtype=float32) | DeviceArray | (0.14749151 dtype=float32) | DeviceArray | (0.20444068 dtype=float32) | DeviceArray | (0.00861918 dtype=float32) | DeviceArray | (0.04842725 dtype=float32) | DeviceArray | (0.14514595 dtype=float32) | DeviceArray | (0.04296788 dtype=float32) | DeviceArray | (0.16140999 dtype=float32) | DeviceArray | (0.04653811 dtype=float32) | DeviceArray | (0.0366917 dtype=float32) | DeviceArray | (0.02625756 dtype=float32) | DeviceArray | (0.13225666 dtype=float32) | DeviceArray | (0.07789332 dtype=float32) | DeviceArray | (0.10782932 dtype=float32) | DeviceArray | (0.05695493 dtype=float32) | DeviceArray | (0.15565604 dtype=float32) | DeviceArray | (0.1280872 dtype=float32) | DeviceArray | (0.07878119 dtype=float32) | DeviceArray | (0.2102576 dtype=float32) | DeviceArray | (0.23361509 dtype=float32) | DeviceArray | (0.19937779 dtype=float32) | DeviceArray | (0.10923144 dtype=float32) | DeviceArray | (0.06369784 dtype=float32) | DeviceArray | (0.13029043 dtype=float32) | DeviceArray | (0.35264996 dtype=float32) | DeviceArray | (0.15761378 dtype=float32) | DeviceArray | (0.04079087 dtype=float32) | DeviceArray | (0.13910118 dtype=float32) | DeviceArray | (0.06796265 dtype=float32) | DeviceArray | (0.06269358 dtype=float32) | DeviceArray | (0.04063544 dtype=float32) | DeviceArray | (0.22588867 dtype=float32) | DeviceArray | (0.05400036 dtype=float32) | DeviceArray | (0.09648355 dtype=float32) | DeviceArray | (0.27409735 dtype=float32) | DeviceArray | (0.14098772 dtype=float32) | DeviceArray | (0.14407358 dtype=float32) | DeviceArray | (0.23484716 dtype=float32) | DeviceArray | (0.1414002 dtype=float32) | DeviceArray | (0.05375629 dtype=float32) | DeviceArray | (0.0433225 dtype=float32) | DeviceArray | (0.03644206 dtype=float32) | DeviceArray | (0.14167693 dtype=float32) | DeviceArray | (0.11410294 dtype=float32) | DeviceArray | (0.21869113 dtype=float32) | DeviceArray | (0.12941018 dtype=float32) | DeviceArray | (0.09764159 dtype=float32) | DeviceArray | (0.07362287 dtype=float32) | DeviceArray | (0.15443942 dtype=float32) | DeviceArray | (0.18085659 dtype=float32) | DeviceArray | (0.12480015 dtype=float32) | DeviceArray | (0.08298955 dtype=float32) | DeviceArray | (0.02433624 dtype=float32) | DeviceArray | (0.1480684 dtype=float32) | DeviceArray | (0.20004867 dtype=float32) | DeviceArray | (0.2301777 dtype=float32) | DeviceArray | (0.05752233 dtype=float32) | DeviceArray | (0.15003173 dtype=float32) | DeviceArray | (0.01942939 dtype=float32) | DeviceArray | (0.1073084 dtype=float32) | DeviceArray | (0.10987931 dtype=float32) | DeviceArray | (0.133917 dtype=float32) | DeviceArray | (0.07377344 dtype=float32) | DeviceArray | (0.11827887 dtype=float32) | DeviceArray | (0.16486982 dtype=float32) | DeviceArray | (0.17668895 dtype=float32) | DeviceArray | (0.11378302 dtype=float32) | DeviceArray | (0.14810212 dtype=float32) | DeviceArray | (0.16968735 dtype=float32) | DeviceArray | (0.0907122 dtype=float32) | DeviceArray | (0.06562477 dtype=float32) | DeviceArray | (0.06084452 dtype=float32) | DeviceArray | (0.09155262 dtype=float32) | DeviceArray | (0.5363316 dtype=float32) | DeviceArray | (0.08965884 dtype=float32) | DeviceArray | (0.1014768 dtype=float32) | DeviceArray | (0.06956763 dtype=float32) | DeviceArray | (0.06478836 dtype=float32) | DeviceArray | (0.05976687 dtype=float32) | DeviceArray | (0.16616128 dtype=float32) | DeviceArray | (0.09168959 dtype=float32) | DeviceArray | (0.07385761 dtype=float32) | DeviceArray | (0.10816969 dtype=float32) | DeviceArray | (0.08949175 dtype=float32) | DeviceArray | (0.09112145 dtype=float32) | DeviceArray | (0.15799542 dtype=float32) | DeviceArray | (0.09226592 dtype=float32) | DeviceArray | (0.13604368 dtype=float32) | DeviceArray | (0.10602078 dtype=float32) | DeviceArray | (0.07258011 dtype=float32) | DeviceArray | (0.22079541 dtype=float32) | DeviceArray | (0.06448995 dtype=float32) | DeviceArray | (0.03455354 dtype=float32) | DeviceArray | (0.02563992 dtype=float32) | DeviceArray | (0.14447542 dtype=float32) | DeviceArray | (0.06609128 dtype=float32) | DeviceArray | (0.07807628 dtype=float32) | DeviceArray | (0.04911132 dtype=float32) | DeviceArray | (0.25725964 dtype=float32) | DeviceArray | (0.321604 dtype=float32) | DeviceArray | (0.08395314 dtype=float32) | DeviceArray | (0.04019181 dtype=float32) | DeviceArray | (0.21245271 dtype=float32) | DeviceArray | (0.22824244 dtype=float32) | DeviceArray | (0.08256909 dtype=float32) | DeviceArray | (0.06017198 dtype=float32) | DeviceArray | (0.06795849 dtype=float32) | DeviceArray | (0.04944463 dtype=float32) | DeviceArray | (0.06991816 dtype=float32) | DeviceArray | (0.06279324 dtype=float32) | DeviceArray | (0.21985953 dtype=float32) | DeviceArray | (0.08700221 dtype=float32) | DeviceArray | (0.02764709 dtype=float32) | DeviceArray | (0.05587214 dtype=float32) | DeviceArray | (0.22236057 dtype=float32) | DeviceArray | (0.19246307 dtype=float32) | DeviceArray | (0.12175538 dtype=float32) | DeviceArray | (0.09772199 dtype=float32) | DeviceArray | (0.05104683 dtype=float32) | DeviceArray | (0.26964825 dtype=float32) | DeviceArray | (0.12590095 dtype=float32) | DeviceArray | (0.03774799 dtype=float32) | DeviceArray | (0.11046229 dtype=float32) | DeviceArray | (0.10475741 dtype=float32) | DeviceArray | (0.103418 dtype=float32) | DeviceArray | (0.04490257 dtype=float32) | DeviceArray | (0.01268317 dtype=float32) | DeviceArray | (0.18036462 dtype=float32) | DeviceArray | (0.18707946 dtype=float32) | DeviceArray | (0.18769448 dtype=float32) | DeviceArray | (0.12296224 dtype=float32) | DeviceArray | (0.05469054 dtype=float32) | DeviceArray | (0.10294311 dtype=float32) | DeviceArray | (0.09177256 dtype=float32) | DeviceArray | (0.123136 dtype=float32) | DeviceArray | (0.03776489 dtype=float32) | DeviceArray | (0.03222608 dtype=float32) | DeviceArray | (0.04878801 dtype=float32) | DeviceArray | (0.16653392 dtype=float32) | DeviceArray | (0.04268677 dtype=float32) | DeviceArray | (0.02347996 dtype=float32) | DeviceArray | (0.01864702 dtype=float32) | DeviceArray | (0.3734633 dtype=float32) | DeviceArray | (0.25895423 dtype=float32) | DeviceArray | (0.19195576 dtype=float32) | DeviceArray | (0.03028359 dtype=float32) | DeviceArray | (0.02695209 dtype=float32) | DeviceArray | (0.04988934 dtype=float32) | DeviceArray | (0.10904366 dtype=float32) | DeviceArray | (0.12928776 dtype=float32) | DeviceArray | (0.15928379 dtype=float32) | DeviceArray | (0.27536952 dtype=float32) | DeviceArray | (0.09600625 dtype=float32) | DeviceArray | (0.1725426 dtype=float32) | DeviceArray | (0.07048325 dtype=float32) | DeviceArray | (0.099159 dtype=float32) | DeviceArray | (0.02540368 dtype=float32) | DeviceArray | (0.17922167 dtype=float32) | DeviceArray | (0.0212125 dtype=float32) | DeviceArray | (0.0815722 dtype=float32) | DeviceArray | (0.14542271 dtype=float32) | DeviceArray | (0.24749619 dtype=float32) | DeviceArray | (0.05893334 dtype=float32) | DeviceArray | (0.1712449 dtype=float32) | DeviceArray | (0.09420688 dtype=float32) | DeviceArray | (0.02622748 dtype=float32) | DeviceArray | (0.1305454 dtype=float32) | DeviceArray | (0.08467602 dtype=float32) | DeviceArray | (0.02197978 dtype=float32) | DeviceArray | (0.04068641 dtype=float32) | DeviceArray | (0.05064335 dtype=float32) | DeviceArray | (0.09977609 dtype=float32) | DeviceArray | (0.04246072 dtype=float32) | DeviceArray | (0.02343187 dtype=float32) | DeviceArray | (0.13324594 dtype=float32) | DeviceArray | (0.2630354 dtype=float32) | DeviceArray | (0.04322887 dtype=float32) | DeviceArray | (0.15957607 dtype=float32) | DeviceArray | (0.16673882 dtype=float32) | DeviceArray | (0.12398994 dtype=float32) | DeviceArray | (0.08124167 dtype=float32) | DeviceArray | (0.20077325 dtype=float32) | DeviceArray | (0.19559386 dtype=float32) | DeviceArray | (0.1842333 dtype=float32) | DeviceArray | (0.08524082 dtype=float32) | DeviceArray | (0.2173501 dtype=float32) | DeviceArray | (0.09893429 dtype=float32) | DeviceArray | (0.05782724 dtype=float32) | DeviceArray | (0.09300647 dtype=float32) | DeviceArray | (0.05596481 dtype=float32) | DeviceArray | (0.14991602 dtype=float32) | DeviceArray | (0.03437607 dtype=float32) | DeviceArray | (0.09553493 dtype=float32) | DeviceArray | (0.06966114 dtype=float32) | DeviceArray | (0.05534899 dtype=float32) | DeviceArray | (0.07200024 dtype=float32) | DeviceArray | (0.22484681 dtype=float32) | DeviceArray | (0.10916046 dtype=float32) | DeviceArray | (0.09050912 dtype=float32) | DeviceArray | (0.02712976 dtype=float32) | DeviceArray | (0.01279251 dtype=float32) | DeviceArray | (0.05382993 dtype=float32) | DeviceArray | (0.08421785 dtype=float32) | DeviceArray | (0.01188497 dtype=float32) | DeviceArray | (0.21588835 dtype=float32) | DeviceArray | (0.11370227 dtype=float32) | DeviceArray | (0.06230798 dtype=float32) | DeviceArray | (0.13997653 dtype=float32) | DeviceArray | (0.06359286 dtype=float32) | DeviceArray | (0.07220353 dtype=float32) | DeviceArray | (0.0334 dtype=float32) | DeviceArray | (0.11794885 dtype=float32) | DeviceArray | (0.09496535 dtype=float32) | DeviceArray | (0.1046474 dtype=float32) | DeviceArray | (0.1035823 dtype=float32) | DeviceArray | (0.13472532 dtype=float32) | DeviceArray | (0.00551149 dtype=float32) | DeviceArray | (0.04120088 dtype=float32) | DeviceArray | (0.05058867 dtype=float32) | DeviceArray | (0.09336282 dtype=float32) | DeviceArray | (0.09295528 dtype=float32) | DeviceArray | (0.08608775 dtype=float32) | DeviceArray | (0.06199365 dtype=float32) | DeviceArray | (0.0617937 dtype=float32) | DeviceArray | (0.150286 dtype=float32) | DeviceArray | (0.06195043 dtype=float32) | DeviceArray | (0.13230294 dtype=float32) | DeviceArray | (0.08006288 dtype=float32) | DeviceArray | (0.10292804 dtype=float32) | DeviceArray | (0.04434935 dtype=float32) | DeviceArray | (0.012344 dtype=float32) | DeviceArray | (0.07714365 dtype=float32) | DeviceArray | (0.14635858 dtype=float32) | DeviceArray | (0.15215755 dtype=float32) | DeviceArray | (0.05721966 dtype=float32) | DeviceArray | (0.10999038 dtype=float32) | DeviceArray | (0.10754811 dtype=float32) | DeviceArray | (0.02903206 dtype=float32) | DeviceArray | (0.08291131 dtype=float32) | DeviceArray | (0.03135716 dtype=float32) | DeviceArray | (0.01032704 dtype=float32) | DeviceArray | (0.01319027 dtype=float32) | DeviceArray | (0.02165905 dtype=float32) | DeviceArray | (0.01598413 dtype=float32) | DeviceArray | (0.03818309 dtype=float32) | DeviceArray | (0.0263007 dtype=float32) | DeviceArray | (0.06489049 dtype=float32) | DeviceArray | (0.03174767 dtype=float32) | DeviceArray | (0.09524271 dtype=float32) | DeviceArray | (0.07422529 dtype=float32) | DeviceArray | (0.05922456 dtype=float32) | DeviceArray | (0.06973667 dtype=float32) | DeviceArray | (0.06622636 dtype=float32) | DeviceArray | (0.03088214 dtype=float32) | DeviceArray | (0.12569013 dtype=float32) | DeviceArray | (0.02329143 dtype=float32) | DeviceArray | (0.06580201 dtype=float32) | DeviceArray | (0.03919755 dtype=float32) | DeviceArray | (0.10207729 dtype=float32) | DeviceArray | (0.23566979 dtype=float32) | DeviceArray | (0.19559336 dtype=float32) | DeviceArray | (0.03993788 dtype=float32) | DeviceArray | (0.16101341 dtype=float32) | DeviceArray | (0.04898437 dtype=float32) | DeviceArray | (0.02734733 dtype=float32) | DeviceArray | (0.10390539 dtype=float32) | DeviceArray | (0.04699416 dtype=float32) | DeviceArray | (0.01698547 dtype=float32) | DeviceArray | (0.3510627 dtype=float32) | DeviceArray | (0.20364201 dtype=float32) | DeviceArray | (0.02348742 dtype=float32) | DeviceArray | (0.03121521 dtype=float32) | DeviceArray | (0.05025707 dtype=float32) | DeviceArray | (0.12236112 dtype=float32) | DeviceArray | (0.08567861 dtype=float32) | DeviceArray | (0.0995774 dtype=float32) | DeviceArray | (0.15711538 dtype=float32) | DeviceArray | (0.1989398 dtype=float32) | DeviceArray | (0.02911996 dtype=float32) | DeviceArray | (0.0813086 dtype=float32) | DeviceArray | (0.21755822 dtype=float32) | DeviceArray | (0.05687335 dtype=float32) | DeviceArray | (0.08339218 dtype=float32) | DeviceArray | (0.11069784 dtype=float32) | DeviceArray | (0.0507085 dtype=float32) | DeviceArray | (0.15307714 dtype=float32) | DeviceArray | (0.32381135 dtype=float32) | DeviceArray | (0.20899259 dtype=float32) | DeviceArray | (0.08859696 dtype=float32) | DeviceArray | (0.02732178 dtype=float32) | DeviceArray | (0.04211922 dtype=float32) | DeviceArray | (0.02136604 dtype=float32) | DeviceArray | (0.04131292 dtype=float32) | DeviceArray | (0.19345668 dtype=float32) | DeviceArray | (0.14513731 dtype=float32) | DeviceArray | (0.01659206 dtype=float32) | DeviceArray | (0.15174122 dtype=float32) | DeviceArray | (0.04329974 dtype=float32) | DeviceArray | (0.01810604 dtype=float32) | DeviceArray | (0.04944286 dtype=float32) | DeviceArray | (0.07420317 dtype=float32) | DeviceArray | (0.00745669 dtype=float32) | DeviceArray | (0.0578404 dtype=float32) | DeviceArray | (0.05872322 dtype=float32) | DeviceArray | (0.11899651 dtype=float32) | DeviceArray | (0.07628623 dtype=float32) | DeviceArray | (0.06577603 dtype=float32) | DeviceArray | (0.0972368 dtype=float32) | DeviceArray | (0.03583071 dtype=float32) | DeviceArray | (0.07601426 dtype=float32) | DeviceArray | (0.06132773 dtype=float32) | DeviceArray | (0.08511664 dtype=float32) | DeviceArray | (0.14120008 dtype=float32) | DeviceArray | (0.11484163 dtype=float32) | DeviceArray | (0.00732884 dtype=float32) | DeviceArray | (0.1652241 dtype=float32) | DeviceArray | (0.20733733 dtype=float32) | DeviceArray | (0.09575816 dtype=float32) | DeviceArray | (0.03836617 dtype=float32) | DeviceArray | (0.06771941 dtype=float32) | DeviceArray | (0.08744257 dtype=float32) | DeviceArray | (0.28499845 dtype=float32) | DeviceArray | (0.04142563 dtype=float32) | DeviceArray | (0.18923 dtype=float32) | DeviceArray | (0.06841114 dtype=float32) | DeviceArray | (0.01086162 dtype=float32) | DeviceArray | (0.13973865 dtype=float32) | DeviceArray | (0.08295525 dtype=float32) | DeviceArray | (0.02174695 dtype=float32) | DeviceArray | (0.03614914 dtype=float32) | DeviceArray | (0.16694383 dtype=float32) | DeviceArray | (0.01704071 dtype=float32) | DeviceArray | (0.09479575 dtype=float32) | DeviceArray | (0.18962568 dtype=float32) | DeviceArray | (0.05383974 dtype=float32) | DeviceArray | (0.07484064 dtype=float32) | DeviceArray | (0.00815824 dtype=float32) | DeviceArray | (0.0391806 dtype=float32) | DeviceArray | (0.02659782 dtype=float32) | DeviceArray | (0.0629589 dtype=float32) | DeviceArray | (0.01739502 dtype=float32) | DeviceArray | (0.05788684 dtype=float32) | DeviceArray | (0.03393091 dtype=float32) | DeviceArray | (0.00251833 dtype=float32) | DeviceArray | (0.1596931 dtype=float32) | DeviceArray | (0.21459089 dtype=float32) | DeviceArray | (0.05738539 dtype=float32) | DeviceArray | (0.11090893 dtype=float32) | DeviceArray | (0.08411334 dtype=float32) | DeviceArray | (0.11580134 dtype=float32) | DeviceArray | (0.05047684 dtype=float32) | DeviceArray | (0.11337662 dtype=float32) | DeviceArray | (0.17569001 dtype=float32) | DeviceArray | (0.01927397 dtype=float32) | DeviceArray | (0.00408409 dtype=float32) | DeviceArray | (0.06950625 dtype=float32) | DeviceArray | (0.23498523 dtype=float32) | DeviceArray | (0.13694634 dtype=float32) | DeviceArray | (0.0183891 dtype=float32) | DeviceArray | (0.07355226 dtype=float32) | DeviceArray | (0.00865012 dtype=float32) | DeviceArray | (0.05644282 dtype=float32) | DeviceArray | (0.19516897 dtype=float32) | DeviceArray | (0.05766698 dtype=float32) | DeviceArray | (0.08032931 dtype=float32) | DeviceArray | (0.04432731 dtype=float32) | DeviceArray | (0.0834727 dtype=float32) | DeviceArray | (0.03114805 dtype=float32) | DeviceArray | (0.0268714 dtype=float32) | DeviceArray | (0.04972389 dtype=float32) | DeviceArray | (0.12564135 dtype=float32) | DeviceArray | (0.01740837 dtype=float32) | DeviceArray | (0.04854679 dtype=float32) | DeviceArray | (0.00307489 dtype=float32) | DeviceArray | (0.07071241 dtype=float32) | DeviceArray | (0.01197111 dtype=float32) | DeviceArray | (0.10054923 dtype=float32) | DeviceArray | (0.10955734 dtype=float32) | DeviceArray | (0.04368454 dtype=float32) | DeviceArray | (0.02746067 dtype=float32) | DeviceArray | (0.04110498 dtype=float32) | DeviceArray | (0.03124383 dtype=float32) | DeviceArray | (0.04435582 dtype=float32) | DeviceArray | (0.04204705 dtype=float32) | DeviceArray | (0.20346342 dtype=float32) | DeviceArray | (0.03216438 dtype=float32) | DeviceArray | (0.01198373 dtype=float32) | DeviceArray | (0.05330779 dtype=float32) | DeviceArray | (0.25169015 dtype=float32) | DeviceArray | (0.01260895 dtype=float32) | DeviceArray | (0.1142676 dtype=float32) | DeviceArray | (0.05174424 dtype=float32) | DeviceArray | (0.05371733 dtype=float32) | DeviceArray | (0.0480561 dtype=float32) | DeviceArray | (0.0908716 dtype=float32) | DeviceArray | (0.02337723 dtype=float32) | DeviceArray | (0.1873621 dtype=float32) | DeviceArray | (0.0894927 dtype=float32) | DeviceArray | (0.08303844 dtype=float32) | DeviceArray | (0.07363971 dtype=float32) | DeviceArray | (0.02907487 dtype=float32) | DeviceArray | (0.05018871 dtype=float32) | DeviceArray | (0.0290828 dtype=float32) | DeviceArray | (0.14843026 dtype=float32) | DeviceArray | (0.06101704 dtype=float32) | DeviceArray | (0.02288624 dtype=float32) | DeviceArray | (0.05555029 dtype=float32) | DeviceArray | (0.08172051 dtype=float32) | DeviceArray | (0.0387427 dtype=float32) | DeviceArray | (0.26094696 dtype=float32) | DeviceArray | (0.08028876 dtype=float32) | DeviceArray | (0.02466978 dtype=float32) | DeviceArray | (0.02442386 dtype=float32) | DeviceArray | (0.20791371 dtype=float32) | DeviceArray | (0.0644429 dtype=float32) | DeviceArray | (0.01931177 dtype=float32) | DeviceArray | (0.01582531 dtype=float32) | DeviceArray | (0.02495396 dtype=float32) | DeviceArray | (0.00913373 dtype=float32) | DeviceArray | (0.03066918 dtype=float32) | DeviceArray | (0.0040138 dtype=float32) | DeviceArray | (0.02371786 dtype=float32) | DeviceArray | (0.0683822 dtype=float32) | DeviceArray | (0.04439509 dtype=float32) | DeviceArray | (0.04516743 dtype=float32) | DeviceArray | (0.19261467 dtype=float32) | DeviceArray | (0.21677122 dtype=float32) | DeviceArray | (0.02152019 dtype=float32) | DeviceArray | (0.02986756 dtype=float32) | DeviceArray | (0.01027062 dtype=float32) | DeviceArray | (0.01494755 dtype=float32) | DeviceArray | (0.00315748 dtype=float32) | DeviceArray | (0.05023377 dtype=float32) | DeviceArray | (0.22388761 dtype=float32) | DeviceArray | (0.11626471 dtype=float32) | DeviceArray | (0.17169641 dtype=float32) | DeviceArray | (0.15748303 dtype=float32) | DeviceArray | (0.00624866 dtype=float32) | DeviceArray | (0.22610767 dtype=float32) | DeviceArray | (0.10448335 dtype=float32) | DeviceArray | (0.019716 dtype=float32) | DeviceArray | (0.02051174 dtype=float32) | DeviceArray | (0.02856154 dtype=float32) | DeviceArray | (0.00836176 dtype=float32) | DeviceArray | (0.03263087 dtype=float32) | DeviceArray | (0.01104674 dtype=float32) | DeviceArray | (0.04706184 dtype=float32) | DeviceArray | (0.06731839 dtype=float32) | DeviceArray | (0.014297 dtype=float32) | DeviceArray | (0.07249997 dtype=float32) | DeviceArray | (0.04504179 dtype=float32) | DeviceArray | (0.05330755 dtype=float32) | DeviceArray | (0.07388648 dtype=float32) | DeviceArray | (0.03480212 dtype=float32) | DeviceArray | (0.08654211 dtype=float32) | DeviceArray | (0.07259355 dtype=float32) | DeviceArray | (0.0363042 dtype=float32) | DeviceArray | (0.06498116 dtype=float32) | DeviceArray | (0.03683126 dtype=float32) | DeviceArray | (0.03675364 dtype=float32) | DeviceArray | (0.05782169 dtype=float32) | DeviceArray | (0.04671234 dtype=float32) | DeviceArray | (0.04091275 dtype=float32) | DeviceArray | (0.01868139 dtype=float32) | DeviceArray | (0.021699 dtype=float32) | DeviceArray | (0.11357785 dtype=float32) | DeviceArray | (0.10132027 dtype=float32) | DeviceArray | (0.09430632 dtype=float32) | DeviceArray | (0.01705555 dtype=float32) | DeviceArray | (0.02620817 dtype=float32) | DeviceArray | (0.04525449 dtype=float32) | DeviceArray | (0.01671517 dtype=float32) | DeviceArray | (0.06457911 dtype=float32) | DeviceArray | (0.05997081 dtype=float32) | DeviceArray | (0.02702314 dtype=float32) | DeviceArray | (0.20504838 dtype=float32) | DeviceArray | (0.010218 dtype=float32) | DeviceArray | (0.06403101 dtype=float32) | DeviceArray | (0.01095816 dtype=float32) | DeviceArray | (0.16701017 dtype=float32) | DeviceArray | (0.14672133 dtype=float32) | DeviceArray | (0.10956438 dtype=float32) | DeviceArray | (0.05338922 dtype=float32) | DeviceArray | (0.01171515 dtype=float32) | DeviceArray | (0.2281201 dtype=float32) | DeviceArray | (0.13303714 dtype=float32) | DeviceArray | (0.10611881 dtype=float32) | DeviceArray | (0.17700095 dtype=float32) | DeviceArray | (0.06789889 dtype=float32) | DeviceArray | (0.09103461 dtype=float32) | DeviceArray | (0.01492886 dtype=float32) | DeviceArray | (0.11023156 dtype=float32) | DeviceArray | (0.1189521 dtype=float32) | DeviceArray | (0.01571473 dtype=float32) | DeviceArray | (0.01954185 dtype=float32) | DeviceArray | (0.12741709 dtype=float32) | DeviceArray | (0.06723693 dtype=float32) | DeviceArray | (0.08088195 dtype=float32) | DeviceArray | (0.05587221 dtype=float32) | DeviceArray | (0.05077397 dtype=float32) | DeviceArray | (0.2851649 dtype=float32) | DeviceArray | (0.15819149 dtype=float32) | DeviceArray | (0.29264185 dtype=float32) | DeviceArray | (0.0739107 dtype=float32) | DeviceArray | (0.0392862 dtype=float32) | DeviceArray | (0.10192797 dtype=float32) | DeviceArray | (0.1285304 dtype=float32) | DeviceArray | (0.11256541 dtype=float32) | DeviceArray | (0.16480182 dtype=float32) | DeviceArray | (0.07716945 dtype=float32) | DeviceArray | (0.04289659 dtype=float32) | DeviceArray | (0.01943694 dtype=float32) | DeviceArray | (0.08669947 dtype=float32) | DeviceArray | (0.03838856 dtype=float32) | DeviceArray | (0.04129554 dtype=float32) | DeviceArray | (0.06120393 dtype=float32) | DeviceArray | (0.03255973 dtype=float32) | DeviceArray | (0.04043845 dtype=float32) | DeviceArray | (0.00602628 dtype=float32) | DeviceArray | (0.008947 dtype=float32) | DeviceArray | (0.11346474 dtype=float32) | DeviceArray | (0.04146959 dtype=float32) | DeviceArray | (0.08314057 dtype=float32) | DeviceArray | (0.03210653 dtype=float32) | DeviceArray | (0.00578438 dtype=float32) | DeviceArray | (0.05664241 dtype=float32) | DeviceArray | (0.03469965 dtype=float32) | DeviceArray | (0.02020389 dtype=float32) | DeviceArray | (0.02535011 dtype=float32) | DeviceArray | (0.18009678 dtype=float32) | DeviceArray | (0.12593217 dtype=float32) | DeviceArray | (0.10352397 dtype=float32) | DeviceArray | (0.03911623 dtype=float32) | DeviceArray | (0.01577754 dtype=float32) | DeviceArray | (0.01731853 dtype=float32) | DeviceArray | (0.11890929 dtype=float32) | DeviceArray | (0.04725932 dtype=float32) | DeviceArray | (0.07533988 dtype=float32) | DeviceArray | (0.02832473 dtype=float32) | DeviceArray | (0.13955936 dtype=float32) | DeviceArray | (0.04318323 dtype=float32) | DeviceArray | (0.2050766 dtype=float32) | DeviceArray | (0.05133053 dtype=float32) | DeviceArray | (0.02573309 dtype=float32) | DeviceArray | (0.0986405 dtype=float32) | DeviceArray | (0.03398749 dtype=float32) | DeviceArray | (0.0194379 dtype=float32) | DeviceArray | (0.01596953 dtype=float32) | DeviceArray | (0.1684515 dtype=float32) | DeviceArray | (0.09083749 dtype=float32) | DeviceArray | (0.06735367 dtype=float32) | DeviceArray | (0.11838879 dtype=float32) | DeviceArray | (0.20378879 dtype=float32) | DeviceArray | (0.3240609 dtype=float32) | DeviceArray | (0.12237539 dtype=float32) | DeviceArray | (0.03126828 dtype=float32) | DeviceArray | (0.06408118 dtype=float32) | DeviceArray | (0.09745135 dtype=float32) | DeviceArray | (0.07410339 dtype=float32) | DeviceArray | (0.01548628 dtype=float32) | DeviceArray | (0.04875257 dtype=float32) | DeviceArray | (0.06343263 dtype=float32) | DeviceArray | (0.04734525 dtype=float32) | DeviceArray | (0.08382969 dtype=float32) | DeviceArray | (0.10539485 dtype=float32) | DeviceArray | (0.01489238 dtype=float32) | DeviceArray | (0.03487247 dtype=float32) | DeviceArray | (0.07079331 dtype=float32) | DeviceArray | (0.11328136 dtype=float32) | DeviceArray | (0.04798754 dtype=float32) | DeviceArray | (0.00505808 dtype=float32) | DeviceArray | (0.03845611 dtype=float32) | DeviceArray | (0.15851428 dtype=float32) | DeviceArray | (0.02073432 dtype=float32) | DeviceArray | (0.00910165 dtype=float32) | DeviceArray | (0.17691278 dtype=float32) | DeviceArray | (0.09306304 dtype=float32) | DeviceArray | (0.05700057 dtype=float32) | DeviceArray | (0.25364026 dtype=float32) | DeviceArray | (0.07563085 dtype=float32) | DeviceArray | (0.07566755 dtype=float32) | DeviceArray | (0.01914044 dtype=float32) | DeviceArray | (0.01226419 dtype=float32) | DeviceArray | (0.07400322 dtype=float32) | DeviceArray | (0.04962331 dtype=float32) | DeviceArray | (0.00632501 dtype=float32) | DeviceArray | (0.03911769 dtype=float32) | DeviceArray | (0.02724355 dtype=float32) | DeviceArray | (0.04010868 dtype=float32) | DeviceArray | (0.15295857 dtype=float32) | DeviceArray | (0.07270188 dtype=float32) | DeviceArray | (0.08089394 dtype=float32) | DeviceArray | (0.43167788 dtype=float32) | DeviceArray | (0.06890041 dtype=float32) | DeviceArray | (0.00872859 dtype=float32) | DeviceArray | (0.02000519 dtype=float32) | DeviceArray | (0.080049 dtype=float32) | DeviceArray | (0.06779668 dtype=float32) | DeviceArray | (0.01582576 dtype=float32) | DeviceArray | (0.0969787 dtype=float32) | DeviceArray | (0.20399466 dtype=float32) | DeviceArray | (0.03513144 dtype=float32) | DeviceArray | (0.13107128 dtype=float32) | DeviceArray | (0.17088169 dtype=float32) | DeviceArray | (0.13242066 dtype=float32) | DeviceArray | (0.02235734 dtype=float32) | DeviceArray | (0.02565818 dtype=float32) | DeviceArray | (0.26408282 dtype=float32) | DeviceArray | (0.164054 dtype=float32) | DeviceArray | (0.01477213 dtype=float32) | DeviceArray | (0.03045212 dtype=float32) | DeviceArray | (0.01543104 dtype=float32) | DeviceArray | (0.05237556 dtype=float32) | DeviceArray | (0.07576944 dtype=float32) | DeviceArray | (0.09318773 dtype=float32) | DeviceArray | (0.03582678 dtype=float32) | DeviceArray | (0.13985795 dtype=float32) | DeviceArray | (0.01472871 dtype=float32) | DeviceArray | (0.15255457 dtype=float32) | DeviceArray | (0.07371823 dtype=float32) | DeviceArray | (0.05062918 dtype=float32) | DeviceArray | (0.07212503 dtype=float32) | DeviceArray | (0.17747189 dtype=float32) | DeviceArray | (0.05809224 dtype=float32) | DeviceArray | (0.16337186 dtype=float32) | DeviceArray | (0.03823576 dtype=float32) | DeviceArray | (0.06984698 dtype=float32) | DeviceArray | (0.06503846 dtype=float32) | DeviceArray | (0.1297228 dtype=float32) | DeviceArray | (0.05425138 dtype=float32) | DeviceArray | (0.02863862 dtype=float32) | DeviceArray | (0.0023126 dtype=float32) | DeviceArray | (0.00499501 dtype=float32) | DeviceArray | (0.01001104 dtype=float32) | DeviceArray | (0.00116451 dtype=float32) | DeviceArray | (0.05462959 dtype=float32) | DeviceArray | (0.02307581 dtype=float32) | DeviceArray | (0.01976457 dtype=float32) | DeviceArray | (0.10969785 dtype=float32) | DeviceArray | (0.21897417 dtype=float32) | DeviceArray | (0.08562109 dtype=float32) | DeviceArray | (0.04433023 dtype=float32) | DeviceArray | (0.08953304 dtype=float32) | DeviceArray | (0.01886191 dtype=float32) | DeviceArray | (0.04505812 dtype=float32) | DeviceArray | (0.01610157 dtype=float32) | DeviceArray | (0.0666295 dtype=float32) | DeviceArray | (0.02014652 dtype=float32) | DeviceArray | (0.03009796 dtype=float32) | DeviceArray | (0.12545499 dtype=float32) | DeviceArray | (0.00458751 dtype=float32) | DeviceArray | (0.03078469 dtype=float32) | DeviceArray | (0.05469 dtype=float32) | DeviceArray | (0.1758561 dtype=float32) | DeviceArray | (0.65059793 dtype=float32) | DeviceArray | (0.386782 dtype=float32) | DeviceArray | (0.18473092 dtype=float32) | DeviceArray | (0.0423617 dtype=float32) | DeviceArray | (0.0538776 dtype=float32) | DeviceArray | (0.02161471 dtype=float32) | DeviceArray | (0.0551862 dtype=float32) | DeviceArray | (0.06550238 dtype=float32) | DeviceArray | (0.06407271 dtype=float32) | DeviceArray | (0.04596137 dtype=float32) | DeviceArray | (0.11815354 dtype=float32) | DeviceArray | (0.05302989 dtype=float32) | DeviceArray | (0.01835855 dtype=float32) | DeviceArray | (0.02728374 dtype=float32) | DeviceArray | (0.1251659 dtype=float32) | DeviceArray | (0.07274124 dtype=float32) | DeviceArray | (0.0039606 dtype=float32) | DeviceArray | (0.04036231 dtype=float32) | DeviceArray | (0.01093898 dtype=float32) | DeviceArray | (0.02964718 dtype=float32) | DeviceArray | (0.07463434 dtype=float32) | DeviceArray | (0.09184857 dtype=float32) | DeviceArray | (0.0242363 dtype=float32) | DeviceArray | (0.14187509 dtype=float32) | DeviceArray | (0.01608073 dtype=float32) | DeviceArray | (0.01311327 dtype=float32) | DeviceArray | (0.06953593 dtype=float32) | DeviceArray | (0.06649483 dtype=float32) | DeviceArray | (0.04922904 dtype=float32) | DeviceArray | (0.04570754 dtype=float32) | DeviceArray | (0.0739583 dtype=float32) | DeviceArray | (0.01069705 dtype=float32) | DeviceArray | (0.03614328 dtype=float32) | DeviceArray | (0.03961327 dtype=float32) | DeviceArray | (0.01508823 dtype=float32) | DeviceArray | (0.02405643 dtype=float32) | DeviceArray | (0.03237712 dtype=float32) | DeviceArray | (0.00319215 dtype=float32) | DeviceArray | (0.06845971 dtype=float32) | DeviceArray | (0.11025947 dtype=float32) | DeviceArray | (0.19688222 dtype=float32) | DeviceArray | (0.12126234 dtype=float32) | DeviceArray | (0.01844969 dtype=float32) | DeviceArray | (0.03225901 dtype=float32) | DeviceArray | (0.15041503 dtype=float32) | DeviceArray | (0.00841038 dtype=float32) | DeviceArray | (0.0564711 dtype=float32) | DeviceArray | (0.10342631 dtype=float32) | DeviceArray | (0.0550149 dtype=float32) | DeviceArray | (0.11451511 dtype=float32) | DeviceArray | (0.00828156 dtype=float32) | DeviceArray | (0.18012631 dtype=float32) | DeviceArray | (0.01638573 dtype=float32) | DeviceArray | (0.0054127 dtype=float32) | ... |
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+sgd_test_loss
+#+end_src
+
+#+RESULTS:
+| DeviceArray | (2.2874207 dtype=float32) | DeviceArray | (1.2141174 dtype=float32) | DeviceArray | (2.0124946 dtype=float32) | DeviceArray | (2.0957506 dtype=float32) | DeviceArray | (0.5729493 dtype=float32) | DeviceArray | (0.7742991 dtype=float32) | DeviceArray | (0.29232284 dtype=float32) | DeviceArray | (0.21905541 dtype=float32) | DeviceArray | (0.24759462 dtype=float32) | DeviceArray | (0.27087125 dtype=float32) | DeviceArray | (0.20089641 dtype=float32) | DeviceArray | (0.17941132 dtype=float32) | DeviceArray | (0.1619227 dtype=float32) | DeviceArray | (0.15563062 dtype=float32) | DeviceArray | (0.17090654 dtype=float32) | DeviceArray | (0.18798178 dtype=float32) | DeviceArray | (0.1347882 dtype=float32) | DeviceArray | (0.17360748 dtype=float32) | DeviceArray | (0.15008762 dtype=float32) | DeviceArray | (0.12809639 dtype=float32) | DeviceArray | (0.10837014 dtype=float32) | DeviceArray | (0.11338905 dtype=float32) | DeviceArray | (0.10742343 dtype=float32) | DeviceArray | (0.11897787 dtype=float32) | DeviceArray | (0.11170497 dtype=float32) | DeviceArray | (0.15563527 dtype=float32) | DeviceArray | (0.1502662 dtype=float32) | DeviceArray | (0.20872411 dtype=float32) | DeviceArray | (0.09024356 dtype=float32) | DeviceArray | (0.09338453 dtype=float32) | DeviceArray | (0.09767982 dtype=float32) | DeviceArray | (0.08128469 dtype=float32) | DeviceArray | (0.08543891 dtype=float32) | DeviceArray | (0.09302609 dtype=float32) | DeviceArray | (0.08564147 dtype=float32) | DeviceArray | (0.07895496 dtype=float32) | DeviceArray | (0.07037561 dtype=float32) | DeviceArray | (0.07662138 dtype=float32) | DeviceArray | (0.10630649 dtype=float32) | DeviceArray | (0.13269864 dtype=float32) | DeviceArray | (0.08689027 dtype=float32) | DeviceArray | (0.07533643 dtype=float32) | DeviceArray | (0.06470495 dtype=float32) | DeviceArray | (0.06845768 dtype=float32) | DeviceArray | (0.08079436 dtype=float32) | DeviceArray | (0.10993765 dtype=float32) | DeviceArray | (0.07906835 dtype=float32) | DeviceArray | (0.08036528 dtype=float32) | DeviceArray | (0.08901488 dtype=float32) | DeviceArray | (0.07721523 dtype=float32) | DeviceArray | (0.0869457 dtype=float32) | DeviceArray | (0.06408478 dtype=float32) | DeviceArray | (0.06928542 dtype=float32) | DeviceArray | (0.06262745 dtype=float32) | DeviceArray | (0.07318115 dtype=float32) | DeviceArray | (0.05590921 dtype=float32) | DeviceArray | (0.07215595 dtype=float32) | DeviceArray | (0.08225872 dtype=float32) | DeviceArray | (0.07087391 dtype=float32) | DeviceArray | (0.05653146 dtype=float32) | DeviceArray | (0.05559207 dtype=float32) | DeviceArray | (0.08927464 dtype=float32) | DeviceArray | (0.07211284 dtype=float32) | DeviceArray | (0.07305952 dtype=float32) | DeviceArray | (0.07194304 dtype=float32) | DeviceArray | (0.05934029 dtype=float32) | DeviceArray | (0.06993791 dtype=float32) | DeviceArray | (0.05721405 dtype=float32) | DeviceArray | (0.05426117 dtype=float32) | DeviceArray | (0.06964175 dtype=float32) | DeviceArray | (0.06916592 dtype=float32) | DeviceArray | (0.05461355 dtype=float32) | DeviceArray | (0.05425943 dtype=float32) | DeviceArray | (0.04842106 dtype=float32) | DeviceArray | (0.0538767 dtype=float32) | DeviceArray | (0.06729484 dtype=float32) | DeviceArray | (0.04736328 dtype=float32) | DeviceArray | (0.05179549 dtype=float32) | DeviceArray | (0.04610185 dtype=float32) | DeviceArray | (0.09614381 dtype=float32) | DeviceArray | (0.04807156 dtype=float32) | DeviceArray | (0.04733973 dtype=float32) | DeviceArray | (0.04576583 dtype=float32) | DeviceArray | (0.06544786 dtype=float32) | DeviceArray | (0.05163987 dtype=float32) | DeviceArray | (0.04789797 dtype=float32) | DeviceArray | (0.05345414 dtype=float32) | DeviceArray | (0.04836835 dtype=float32) | DeviceArray | (0.043235 dtype=float32) | DeviceArray | (0.04906005 dtype=float32) | DeviceArray | (0.04135792 dtype=float32) | DeviceArray | (0.05764753 dtype=float32) | DeviceArray | (0.03975559 dtype=float32) | DeviceArray | (0.04504101 dtype=float32) | DeviceArray | (0.05610222 dtype=float32) | DeviceArray | (0.07931769 dtype=float32) | DeviceArray | (0.04729106 dtype=float32) | DeviceArray | (0.04574601 dtype=float32) | DeviceArray | (0.0446164 dtype=float32) | DeviceArray | (0.06681409 dtype=float32) | DeviceArray | (0.04059333 dtype=float32) | DeviceArray | (0.04049693 dtype=float32) |
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py :file ./images_final/ttc.png
+r1 = np.array(sgd_train_loss)
+r1.shape[0]
+#+end_src
+
+#+RESULTS:
+: 1224
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py :file ./images_final/ttc.png
+compare_tt(sgd_train_loss, sgd_test_loss, "SGD Optimal", "Train", "Test")
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+#+attr_org: :width 427
+[[file:./images_final/ttc.png]]
+:END:
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py :file ./images_final/tta.png
+compare_tt(adam_train_loss, adam_test_loss, "Adam Optimal", "Train", "Test")
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+#+attr_org: :width 427
+[[file:./images_final/tta.png]]
+:END:
 
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
 runs = 2
@@ -730,9 +913,21 @@ plot_history(mlruns_l['sgd_default_loss_histories'])
 plot_history(mlruns_l['sgd_optimal_loss_histories'])
 #+end_src
 
+#+RESULTS:
+:RESULTS:
+#+attr_org: :width 395
+[[file:./.ob-jupyter/1e618f69bb1fffe92a56b1f63d1ff591fe21dd61.png]]
+:END:
+
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
 plot_history(mlruns_l['adam_default_loss_histories'])
 #+end_src
+
+#+RESULTS:
+:RESULTS:
+#+attr_org: :width 395
+[[file:./.ob-jupyter/65ffdebde50d7304fbcc40fa2b066abd895d4c4a.png]]
+:END:
 
 #+begin_src python :results replace :exports none :tangle ./FinalSrc.py
 plot_history(mlruns_l['adam_optimal_loss_histories'])
@@ -766,7 +961,7 @@ np.array(mlruns_l['sgd_optimal_loss_histories']).shape
 | 20 | 1224 |
 
 #+begin_src python :results none :exports none :tangle ./FinalSrc.py
-def compare_sgd(r1, r2):
+def compare_sgd(r1, r2, title="Title", r1l="r1", r2l="r2"):
     r1 = np.array(r1) ; r2 = np.array(r2)
     xr = r1.shape[1]  ; xr2 = r2.shape[1]
     x1 = np.linspace(0, 100, xr)
@@ -774,43 +969,121 @@ def compare_sgd(r1, r2):
     a1, l1, h1 = avg_max_min(r1)
     a2, l2, h2 = avg_max_min(r2)
 
-    plt.semilogy(x1, a1 , 'b-')
-    plt.fill_between(x1, l1, h1)
+    plt.semilogy(x1, a1, color='#2e6fd9bb', label=r1l)
+    plt.fill_between(x1, l1, h1, color="#3d84f588")
     xlim = plt.xlim()
     ylim = plt.ylim()
-    plt.semilogy(x2, a2 , 'k-')
-    plt.fill_between(x2, l2, h2)
+    plt.semilogy(x2, a2, color='#ff9c24bb', label=r2l)
+    plt.fill_between(x2, l2, h2, color='#ffc37088')
     plt.xlim(xlim)
     plt.ylim(ylim)
+    plt.title(title)
+    plt.legend()
 
     plt.xlabel(r'%epoch')
     plt.ylabel(r'loss')
     # plt.title("default vs optimal")
 #+end_src
 
-#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+Opaque orange for mean.
+Transparent pastel orange for variance
+
+Same for blue.
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py :file ./images_final/cdo.png
 r1 = np.array(mlruns_l['sgd_default_loss_histories'])
 r2 = np.array(mlruns_l['sgd_optimal_loss_histories'])
 
-compare_sgd(r1, r2)
+compare_sgd(r2, r1, title="Constant: Default vs. Optimal", r1l="Optimal", r2l="Default")
 #+end_src
 
-#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+#+RESULTS:
+:RESULTS:
+#+attr_org: :width 428
+[[file:./images_final/cdo.png]]
+:END:
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py :file ./images_final/ado.png
 r1 = np.array(mlruns_l['adam_default_loss_histories'])
 r2 = np.array(mlruns_l['adam_optimal_loss_histories'])
-compare_sgd(r1, r2)
+
+compare_sgd(r1=r2, r2=r1, title="Adam: Default vs. Optimal", r1l="Optimal", r2l="Default")
 #+end_src
 
-#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+#+RESULTS:
+:RESULTS:
+#+attr_org: :width 428
+[[file:./images_final/ado.png]]
+:END:
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py :file ./images_final/oo.png
 r1 = np.array(mlruns_l['sgd_optimal_loss_histories'])
 r2 = np.array(mlruns_l['adam_optimal_loss_histories'])
-compare_sgd(r1, r2)
+compare_sgd(r1=r1, r2=r2, title="Optimal Constant vs. Optimal Adam", r1l="Constant", r2l="Adam")
 #+end_src
 
-#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+#+RESULTS:
+:RESULTS:
+#+attr_org: :width 428
+[[file:./images_final/oo.png]]
+:END:
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py :file ./images_final/dd.png
 r1 = np.array(mlruns_l['sgd_default_loss_histories'])
 r2 = np.array(mlruns_l['adam_default_loss_histories'])
-compare_sgd(r1, r2)
+compare_sgd(r1=r2, r2=r1, title="Default Constant vs. Default Adam", r1l="Adam", r2l="Constant")
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+#+attr_org: :width 428
+[[file:./images_final/dd.png]]
+:END:
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+def compare_tt(F, F2, title="Title", Fl="r1", F2l="r2"):
+
+    r1 = np.array(F) ; r2 = np.array(F2)
+    xr = r1.shape[0]  ; xr2 = r2.shape[0]
+    
+    x1 = np.linspace(0, 100, xr)
+    x2 = np.linspace(0, 100, xr2)
+    
+    plt.semilogy(x1, F, color='#2e6fd9bb', label=Fl)
+
+    xlim = plt.xlim()
+    ylim = plt.ylim()
+    plt.semilogy(x2, F2, color='#ff9c24bb', label=F2l)
+
+    plt.xlim(xlim)
+    plt.ylim(ylim)
+
+    plt.title(title)
+    plt.legend()
+
+    plt.xlabel(r'%run')
+    plt.ylabel(r'loss')
+#+end_src
+
+#+RESULTS:
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py 
+print(mlruns_l['sgd_optimal_test_losses'][:10])
+print(np.array(mlruns_l['sgd_optimal_test_losses']).shape)
+print(np.array(mlruns_l['sgd_optimal_loss_histories']).shape)
+print(mlruns_l['sgd_optimal_test_losses'])
+print([x[-1] for x in mlruns_l['sgd_optimal_loss_histories']])
+#+end_src
+
+#+RESULTS:
+: [array(0.04500636, dtype=float32), array(0.06404796, dtype=float32), array(0.05765199, dtype=float32), array(0.04077351, dtype=float32), array(0.05108815, dtype=float32), array(0.04461969, dtype=float32), array(0.04215717, dtype=float32), array(0.0407884, dtype=float32), array(0.04415868, dtype=float32), array(0.04610527, dtype=float32)]
+: (20,)
+: (20)
+: [array(0.04500636, dtype=float32), array(0.06404796, dtype=float32), array(0.05765199, dtype=float32), array(0.04077351, dtype=float32), array(0.05108815, dtype=float32), array(0.04461969, dtype=float32), array(0.04215717, dtype=float32), array(0.0407884, dtype=float32), array(0.04415868, dtype=float32), array(0.04610527, dtype=float32), array(0.04775127, dtype=float32), array(0.04967668, dtype=float32), array(0.0527702, dtype=float32), array(0.0595872, dtype=float32), array(0.03693303, dtype=float32), array(0.04536712, dtype=float32), array(0.05206707, dtype=float32), array(0.04080013, dtype=float32), array(0.07966749, dtype=float32), array(0.05549214, dtype=float32)]
+: [array(0.00884845, dtype=float32), array(0.09898926, dtype=float32), array(0.07103581, dtype=float32), array(0.01699756, dtype=float32), array(0.10555875, dtype=float32), array(0.01452302, dtype=float32), array(0.03791152, dtype=float32), array(0.01886327, dtype=float32), array(0.03603072, dtype=float32), array(0.08265622, dtype=float32), array(0.00615307, dtype=float32), array(0.068738, dtype=float32), array(0.03510617, dtype=float32), array(0.06303298, dtype=float32), array(0.00525225, dtype=float32), array(0.00366069, dtype=float32), array(0.0112321, dtype=float32), array(0.00506205, dtype=float32), array(0.30149227, dtype=float32), array(0.05757113, dtype=float32)]
+
+#+begin_src python :results replace :exports none :tangle ./FinalSrc.py
+
 #+end_src
 
 Optimal is scaled down to the scale of default.
@@ -1081,64 +1354,218 @@ def train_and_evaluate(config: ml_collections.ConfigDict,
   return state
 #+end_src
 
-* Introduction
-** Acomplishments
-The acomplishments of this Assignment are as follows:
-- Doobie
-- Scooby do
+
+
+
+* Tasks                                                            :noexport:
+- Write about how the plots were generated.
+  - generalised or ungeneralised performance?
+  - what is the loss function?
+
+
+- What to do next??
+- Generate plots for the 2 layer SGD.
+  - for both mean squared error
+  - and also the cosine similiarith
+
+  
+  
+
 * Stochastic Gradient Descent: Constant and Adam Step Sizes
+<<sec:cva>>
 
+| Constant      | Alpha | Batch Size |
+|---------------+-------+------------|
+| Default       |   0.1 |        128 |
+| Optimal MNIST | 0.489 |         49 |
+| Optimal TwNet |  1000 |       2000 |
 
-| Constant | Alpha | Batch Size |
-|----------+-------+------------|
-| Default  |   0.1 |        128 |
-| Optimal  | 0.489 |         49 |
-
-| Adam    | Alpha | Batch Size | Beta1 |  Beta2 |
-|---------+-------+------------+-------+--------|
-| Default |  0.01 |        128 |   0.9 |  0.999 |
-| Optimal | 0.015 |         98 | 0.898 | 0.9575 |
-
-
+| Adam          | Alpha | Batch Size | Beta1 |  Beta2 |
+|---------------+-------+------------+-------+--------|
+| Default       |  0.01 |        128 |   0.9 |  0.999 |
+| Optimal MNIST | 0.015 |         98 | 0.898 | 0.9575 |
+| Optimal TwNet |   1.9 |        960 | 0.869 |  0.662 |
 
 * Report
-** MNIST 
-sgd_default_alpha = 0.1
-sgd_default_batch = 128
+** Model and Dataset 1: MNIST
+MNIST model and code obtained from https://github.com/google/flax/tree/main/examples/mnist. 60,000 28x28 images and labels used for training, and 10,000 used for testing. The model classifies which of the 10 digits is handwritten in the image.
 
-sgd_optimal_alpha = 0.489
-sgd_optimal_batch = 49
+It is a neural net with convolutions using "softmax cross entropy" loss https://optax.readthedocs.io/en/latest/api.html#optax.softmax_cross_entropy with the following configuration:
+#+begin_src python :results none :exports code :tangle ./FinalSrc.py
+    x = nn.Conv(features=32, kernel_size=(3, 3))(x)
+    x = nn.relu(x)
+    x = nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2))
+    x = nn.Conv(features=64, kernel_size=(3, 3))(x)
+    x = nn.relu(x)
+    x = nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2))
+    x = x.reshape((x.shape[0], -1))  # flatten
+    x = nn.Dense(features=256)(x)
+    x = nn.relu(x)
+    x = nn.Dense(features=10)(x)
+#+end_src
 
-adam_default_alpha = 0.01
-adam_default_b1 = 0.9
-adam_default_b2 = 0.999
-adam_default_batch = 128
 
-adam_optimal_alpha = 0.0015
-adam_optimal_b1 = 0.898
-adam_optimal_b2 = 0.9575
-adam_optimal_batch = 98
+*** Selecting Hyper Parameters
+<<sec:mnistgrs>>
 
+Ulitmately global random search was used to find the optimal hyperparameters. However to get a feel for how different hyperparameters effected the performance and a suitable range for the global random search, the algorithms were manually run for a small number of iterations and the loss was observed.
 
-Global random search was used to find the optimal hyperparameters.
-20 runs with for each Cosntant step and Adam. Ranges were
+A fixed iteration number was picked across all the runs of global random search as we can be quite sure that larger iterations will yield better results, this way random search runs will not be wasted on low iteration choices by the random search.
+
+The training dataset was used to calculate the loss at the end of a run to try and optimise for generalised performance.
+
+This model was run on a CPU, so only one epoch was ran. 20 runs for each Constant step and Adam.
+
+The ranges were picked as small as thought was appropriate depending on short manual runs of the training.
+
+Hyperparameter ranges for:
+- Constant step size:
+  - Alpha: 0.4 to 0.8
+  - BatchSize: 40 to 90
+- Adam:
+  - Alpha: 0.001 to 0.1
+  - Beta1: 0.5 to 0.99
+  - Beta2: 0.5 to 0.99
+  - BatchSize: 1 to 128
+
+The resulting best hyperparameters returned by global random search are given in the tables of [[sec:cva]].
+
+*** Comparison
+<<sec:mniste>>
+
+The algorithms were run with optimal and default parameters 20 times. During the runs the loss of the training batches were recorded of each iteration (ungeneralised). On a CPU, unbatched loss calculations would be quite computationally expensive (since using all of the data to calculate the loss), even if done every 1% of iterations.
+Theese runs are plotted and compared with each other. The mean loss for an iteration of the runs is given by the darker, opaque line, and the min and max value of the loss for the iteration across runs is the ligher transparent colour coloured across the y axis:
+
+- Fig \ref{fig:cdo}: Constant Default vs Constant Optimal.
+  We see that default has a tighter spread, this is due to both the smaller step size and higher batch size.
+  The smaller step size causes more cautious movements and leaves more iterations to average out its downhill direction while not changing the magnitude of the loss too much.
+  The higher batch size reduces the noise in a single iteration because it uses more of the data to construct the gradients.
+  The opposite we can see in the Optimal parameters for the opposite reasons, it has higher step and lower batch, which performs better on average.
+  It could be that the noisey nature and a lucky score is what caused the global random search to pick the parameters.
+  Perhaps there exited a more consistent param combination but did not get picked because of the high variance one.
+- Fig \ref{fig:ado}: Adam Default vs Optimal.
+  Even though default and optimal params (Beta2 most varied) are not exactly identical, the performance is quite the same. Though we can see that both are quite noisey, and there could be parameters that aren't as noisey.
+  This could be because the alpha and batch size aren't too different.
+- Fig \ref{fig:dd}: Default Constant vs Default Adam.
+  We can see the default adam is better than the default constant, though it is a little bit more noisey than the constant.
+- Fig \ref{fig:oo}: Optimal Constant vs Optimal Adam.
+  We can see that on average the optimal constant and adam perform identical, though the constant one is a bit more noisey. This could be because adam has double the batch size.
+  Also perhaps that the noisey ones are more likely to be picked, and perhaps adams noise is uniform over a larger range of parameters, due to the averaging effects of Beta1 and Beta2.
 
 #+begin_export latex
 \begin{figure}[htb]
 \centering
-% \captionbox{\label{fig:a1}}{\includegraphics[width=\figwidth\textwidth]{final/a1.png}}
-% \captionbox{\label{fig:a2}}{\includegraphics[width=\figwidth\textwidth]{final/a2.png}}\\[2ex]
+\captionbox{\label{fig:cdo}}{\includegraphics[width=\figwidth\textwidth]{./images_final/cdo.png}}
+\captionbox{\label{fig:ado}}{\includegraphics[width=\figwidth\textwidth]{./images_final/ado.png}}\\[2ex]
+\captionbox{\label{fig:dd}}{\includegraphics[width=\figwidth\textwidth]{./images_final/dd.png}}
+\captionbox{\label{fig:oo}}{\includegraphics[width=\figwidth\textwidth]{./images_final/oo.png}}\\[2ex]
+\end{figure}
+\clearpage
+#+end_export
+
+*** Generalised vs. Ungeneralised
+
+Each algorithm was run once with optimal parameters, after every 12 iterations, the non-batched train and test losses were calculated and recorded. For Constant step size 1224 occured, and for Adam 612 (due to the different batch sizes and constant 1 epoch).
+
+Train and test losses are plotted \ref{fig:ttc}, \ref{fig:tta}, we can can see that for both, the difference between train and test performance is quite identical throughout the training.
+
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:ttc}}{\includegraphics[width=\figwidth\textwidth]{./images_final/ttc.png}}
+\captionbox{\label{fig:tta}}{\includegraphics[width=\figwidth\textwidth]{./images_final/tta.png}}\\[2ex]
 \end{figure}
 \clearpage
 #+end_export
 
 
+** Model and Dataset 2: Twitter Network Wordvectors
+<<sec:nete>>
+
+The second dataset is a model and data adapted from my Text Analytics group paper, available at https://github.com/ErnestKz/TextAnalyticsReport/blob/main/Text_Analytics_Final_Paper%20(1).pdf.
+Input data to model is all possible combinations of links between users and corresponding pair of wordvectors counting the word occurances of their posts, output data is a value that represents the strength of the connection, the labelled data comes from whether they are following each other or not.
+Weights are added on wordvectors such that wordvector similairty between users corpus can maximally overlap with whether they are following each other. The model is a linear regression model.
+Rather than batching both wordvector indices and edges as done in the paper, only edges are batched to resemble standard stochastic gradient descent.
+
+The loss function is a cosine distance https://optax.readthedocs.io/en/latest/api.html#optax.cosine_distance applied to the pair of word vectors for each edge, and then another cosine distance of the resulting edge vector with the edge vector that corresponds to the followage of each edge.
+
+The wordvectors have a large dimension and hence the word counts have to be scaled to a smaller value such that the cosine distance calculation does not cause an floating point overflow.
+
+32,000 edges were used for training. 11,000 edges were used for testing. The size of a wordvector is 3933 dimensions.
 
 
+*** Selecting Hyper Parameters
+Similarly, the model was run manually with small number of iterations varying the parameters to get a feel for them.
 
+Global Random Search of 20 runs each was performed, though this time the final training loss was mistakingly used to compare performance, though it offers some variance in the analysis.
 
+Another accidental difference in this global random search was that the iteration count (3000)
+was kept constant rather than the epoch, this lead to varied batch sizes causing different amount of data used across runs, which may not have been ideal and fair across runs.
 
+Hyperparameter ranges for:
+- Constant step size:
+  - Alpha: 1 to 1000
+  - BatchSize: 12 to 2048
+- Adam:
+  - Alpha: 0.1 to 100
+  - Beta1: 0.5 to 0.99
+  - Beta2: 0.5 to 0.99
+  - BatchSize: 12 to 2049
 
+This time the values of the global random search were collected and plotted. Though it was hard to observe obvious trends in the data due to sparsity of data and it's high dimensionality, but it did give enough intuition on how to iterate on new ranges for the global random search, though this was not done for this report, due to it's time consuming nature and parameters seemed good enough for comparison.
+
+The resulting best hyperparameters returned by global random search are given in the tables of [[sec:cva]].
+
+Step size and batch on alpha needs to be large perhaps because the slope is small due to sparse, uniform nature of the problem, i.e word vectors are sparse, and the ground truth edges dont contain many connections.
+
+Where beta1 in adam is more keeping track of directional information (heavyball-like), beta2 is more keeping track of magnitudional information (RMSProp-like). We see that the optimal beta2 parameter is quite low, causing to forget the previous gradients faster, this makes sense as the word vectors are quite sparse, and might only need a slight adjustment once the algorithm encounters it and not to keep updating after it is gone. It could be that the heavy ball component allows for a continued extra push whenever it eventually encounters a gradient in one the batches that it had seen before.
+
+*** Comparison
+The algorithms were run 20 times with 3000 iterations each (again is quite unfair as the different algorithms have different batch sizes). Unlike the previous, since a GPU was available, nonbatched test loss was recorded every 1% of the total iteration count.
+The results are plotted in the same fashion:
+
+- Fig \ref{fig:cdo2}: Constant Default vs Constant Optimal.
+  Constant default has a tiny alpha compared to the optimal one, so the default one is not making any progress.
+- Fig \ref{fig:ado2}: Adam Default vs Adam Optimal.
+  We also see a slow convergence on default adam, though it is not as bad.
+  The optimal alpha is only 2 magnitudes bigger than the default, whereas for
+  constant it was 4.
+  Though we see more jitter on the optimal one, even though batch size is large.
+  The batch size is 8 times larger than the default, which most likely makes it an unfair comparison.
+  It is perhaps going though more of the data, causing more chance to make overfits, and these graphs can show it as they are test losses.
+- Fig \ref{fig:dd2}: Default Constant vs Default Adam.
+  Again, default constant alpha is too tiny to be comparable.
+- Fig \ref{fig:oo2}: Optimal Constant vs Optimal Adam.
+  Both perform quite similarly. Even though the parameters are quite varied between them in terms of batch size and step size. Though Adam still pulls ahead of Constant.
+
+We see less noise overall than the previous model, this can be because there are not as many degrees of freedom to
+be noisey i.e it is a linear model rather than a non-linear neural network.
+
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:cdo2}}{\includegraphics[width=\figwidth\textwidth]{./images_final/cdo2.png}}
+\captionbox{\label{fig:ado2}}{\includegraphics[width=\figwidth\textwidth]{./images_final/ado2.png}}\\[2ex]
+\captionbox{\label{fig:dd2}}{\includegraphics[width=\figwidth\textwidth]{./images_final/dd2.png}}
+\captionbox{\label{fig:oo2}}{\includegraphics[width=\figwidth\textwidth]{./images_final/oo2.png}}\\[2ex]
+\end{figure}
+\clearpage
+#+end_export
+
+*** Generalised vs. Ungeneralised
+The algorithms were run 100,000 times with optimal parameters evaluating and recording non-batched loss on test and train datasets at every 1% of iterations.
+
+\ref{fig:ttc2}, \ref{fig:tta2} we see that both suffer the same problem, the test dataset is indicating that the convergence stopped at early on, and furthermore for Constant step the loss is increasing. The constant step loss increase could be that having the batch size high allows it to fit to the non-generalised peculiarties of the test dataset more.
+The separation of train and test could also be a symptom of picking the hyperparameter based on the train value, causing the algorithm to behave such that it overfits to the trianing set.
+
+#+begin_export latex
+\begin{figure}[htb]
+\centering
+\captionbox{\label{fig:ttc2}}{\includegraphics[width=\figwidth\textwidth]{./images_final/ttc2.png}}
+\captionbox{\label{fig:tta2}}{\includegraphics[width=\figwidth\textwidth]{./images_final/tta2.png}}\\[2ex]
+\end{figure}
+\clearpage
+#+end_export
 
 
 * Appendix
@@ -1171,5 +1598,13 @@ Global random search was used to find the optimal hyperparameters.
 \lstset{style=mystyle}
 
 \lstinputlisting[language=Python]{FinalSrc.py}
+\lstinputlisting[language=Python]{text_analytics_twitter_network_stochastic_gradient_descent_jax.py}
 #+end_export
 
+* Bibliography.
+
+- https://optax.readthedocs.io/en/latest/api.html#optax.cosine_distance
+- https://github.com/ErnestKz/TextAnalyticsReport/blob/main/Text_Analytics_Final_Paper%20(1).pdf
+- https://github.com/google/flax/tree/main/examples/mnist
+- https://optax.readthedocs.io/en/latest/api.html#optax.softmax_cross_entropy
+- https://jax.readthedocs.io/en/latest/
